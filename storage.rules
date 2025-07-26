@@ -1,0 +1,23 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Files in the 'products' folder (e.g., product images)
+    match /products/{productId}/{fileName} {
+      allow read; // Anyone can read product images
+
+      // Authenticated users (vendors, admins) can create, update, delete
+      allow write: if request.auth != null && (
+        // Allow vendors to manage their own product images (assuming productId relates to vendor)
+        // This is a simplified rule; in a real app, you'd verify vendorId in Firestore
+        // For now, allowing any authenticated user to write to a product path, for testing.
+        // A more robust rule would involve checking if the user is the product's vendor.
+        request.auth.uid != null
+      );
+    }
+
+    // Default rule: no one can read or write unless explicitly allowed above
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+} 

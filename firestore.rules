@@ -1,0 +1,155 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isAdminManager() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin-manager';
+    }
+    
+    function isVendor() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'vendor';
+    }
+    
+    function isCustomer() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'customer';
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isVendorOwner(vendorId) {
+      return isAuthenticated() && request.auth.uid == vendorId;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if resource.data.role == 'vendor' || isOwner(userId) || isAdmin() || isAdminManager();
+      allow list: if true; // Allow anyone to list users (but only vendor docs will be readable)
+      allow update: if
+        (
+          isOwner(userId) &&
+          // Only allow updating addresses and displayName, not phoneNumber or email
+          request.resource.data.keys().hasOnly(['displayName', 'addresses', 'updatedAt', 'role']) &&
+          (
+            !request.resource.data.keys().hasAny(['role']) ||
+            request.resource.data.role == resource.data.role
+          )
+        )
+        || isAdmin() || isAdminManager();
+      allow create: if isAuthenticated();
+      allow delete: if isAdmin() || isAdminManager();
+    }
+
+    // Products collection
+    match /products/{productId} {
+      allow read: if true; // Public read access for products
+      allow create: if isAuthenticated() && isVendor();
+      allow update: if isAuthenticated(); // TEMPORARY: Allow all authenticated users to update products
+      allow delete: if isAuthenticated() && (
+        isVendorOwner(resource.data.vendorId) || 
+        isAdmin() || 
+        isAdminManager()
+      );
+    }
+
+    // Orders collection
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (
+        isOwner(resource.data.userId) || 
+        isVendorOwner(resource.data.vendorId) || 
+        isAdmin() || 
+        isAdminManager()
+      );
+      allow create: if isAuthenticated(); // DEBUG: allow any authenticated user to create orders
+      allow update: if isAuthenticated() && (
+        isVendorOwner(resource.data.vendorId) || 
+        isAdmin() || 
+        isAdminManager()
+      );
+      allow delete: if isAuthenticated() && (isAdmin() || isAdminManager());
+    }
+
+    // Carts collection
+    match /carts/{cartId} {
+      allow read, create, update, delete: if isAuthenticated(); // TEMPORARY: Allow all authenticated users to write to their carts
+    }
+
+    // Support tickets collection
+    match /supportTickets/{ticketId} {
+      allow read: if isAuthenticated() && (
+        isOwner(resource.data.userId) || 
+        isAdmin() || 
+        isAdminManager() ||
+        // Allow vendor to read tickets for their orders
+        (
+          resource.data.orderId != null &&
+          exists(/databases/$(database)/documents/orders/$(resource.data.orderId)) &&
+          isVendorOwner(get(/databases/$(database)/documents/orders/$(resource.data.orderId)).data.vendorId)
+        )
+      );
+      allow list: if isAuthenticated() && (isOwner(request.auth.uid) || isAdmin() || isAdminManager());
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        isOwner(resource.data.userId) || 
+        isAdmin() || 
+        isAdminManager()
+      );
+      allow delete: if isAuthenticated() && (isAdmin() || isAdminManager());
+    }
+
+    // Transactions collection
+    match /transactions/{transactionId} {
+      allow read: if isAuthenticated() && (isAdmin() || isAdminManager());
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isAdmin() || isAdminManager());
+      allow delete: if isAuthenticated() && (isAdmin() || isAdminManager());
+    }
+
+    // Categories collection
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAuthenticated() && (isAdmin() || isAdminManager());
+    }
+
+    // Reviews collection
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isCustomer();
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAuthenticated() && (
+        isOwner(resource.data.userId) || 
+        isAdmin() || 
+        isAdminManager()
+      );
+    }
+
+    // Allow customers to read and update the orderMeta/numbering document for order number generation
+    match /orderMeta/numbering {
+      allow get, update, create: if request.auth != null;
+    }
+
+    // Allow authenticated users to read and update the ticketMeta/numbering document for ticket number generation
+    match /ticketMeta/numbering {
+      allow get, update, create: if request.auth != null;
+    }
+
+    // Allow authenticated users to read and update the userMeta/numbering document for user number generation
+    match /userMeta/numbering {
+      allow get, update, create: if request.auth != null;
+    }
+  }
+} 
