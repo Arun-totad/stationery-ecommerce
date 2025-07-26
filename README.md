@@ -1,4 +1,4 @@
-# Swift Stationery E-commerce Platform
+# Swift Market Place
 
 A modern e-commerce platform connecting stationery shops with schools and customers, built with Next.js and Firebase. This platform features robust user roles, streamlined product and order management, comprehensive support system, and secure payment processing with a focus on intuitive user experiences for all stakeholders.
 
