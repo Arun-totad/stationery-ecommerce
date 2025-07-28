@@ -23,4 +23,4 @@ export async function POST(request: Request) {
     console.error('Error creating Razorpay order:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-} 
+}

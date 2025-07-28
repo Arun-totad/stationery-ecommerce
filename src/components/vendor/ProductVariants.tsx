@@ -33,7 +33,9 @@ const validationSchema = Yup.object({
   variants: Yup.array().of(
     Yup.object({
       name: Yup.string().required('Variant name is required'),
-      options: Yup.array().of(Yup.string().required('Option is required')).min(1, 'At least one option is required'),
+      options: Yup.array()
+        .of(Yup.string().required('Option is required'))
+        .min(1, 'At least one option is required'),
     })
   ),
   productVariants: Yup.array().of(
@@ -87,7 +89,8 @@ export default function ProductVariants({
         v.id === variantId
           ? {
               ...v,
-              [field]: field === 'options' ? value.split(',').map((opt: string) => opt.trim()) : value,
+              [field]:
+                field === 'options' ? value.split(',').map((opt: string) => opt.trim()) : value,
             }
           : v
       )
@@ -96,18 +99,14 @@ export default function ProductVariants({
 
   const addOption = (variantId: string) => {
     setVariants(
-      variants.map((v) =>
-        v.id === variantId ? { ...v, options: [...v.options, ''] } : v
-      )
+      variants.map((v) => (v.id === variantId ? { ...v, options: [...v.options, ''] } : v))
     );
   };
 
   const removeOption = (variantId: string, optionIndex: number) => {
     setVariants(
       variants.map((v) =>
-        v.id === variantId
-          ? { ...v, options: v.options.filter((_, i) => i !== optionIndex) }
-          : v
+        v.id === variantId ? { ...v, options: v.options.filter((_, i) => i !== optionIndex) } : v
       )
     );
   };
@@ -159,9 +158,7 @@ export default function ProductVariants({
 
   const updateProductVariant = (id: string, field: keyof ProductVariant, value: any) => {
     setProductVariants(
-      productVariants.map((pv) =>
-        pv.id === id ? { ...pv, [field]: value } : pv
-      )
+      productVariants.map((pv) => (pv.id === id ? { ...pv, [field]: value } : pv))
     );
   };
 
@@ -169,21 +166,21 @@ export default function ProductVariants({
     <div className="space-y-6">
       {/* Variants Section */}
       <div>
-        <div className="flex justify-between items-center mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-medium text-gray-900">Product Variants</h3>
           <button
             type="button"
             onClick={addVariant}
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
           >
             Add Variant
           </button>
         </div>
 
         {variants.map((variant) => (
-          <div key={variant.id} className="mb-6 p-4 border rounded-lg">
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex-1 mr-4">
+          <div key={variant.id} className="mb-6 rounded-lg border p-4">
+            <div className="mb-4 flex items-start justify-between">
+              <div className="mr-4 flex-1">
                 <label className="block text-sm font-medium text-gray-700">
                   Variant Name (e.g., Size, Color)
                 </label>
@@ -243,7 +240,7 @@ export default function ProductVariants({
           <button
             type="button"
             onClick={generateProductVariants}
-            className="mt-4 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            className="mt-4 rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
           >
             Generate Product Variants
           </button>
@@ -253,10 +250,10 @@ export default function ProductVariants({
       {/* Product Variants Section */}
       {productVariants.length > 0 && (
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Product Variants</h3>
+          <h3 className="mb-4 text-lg font-medium text-gray-900">Product Variants</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {productVariants.map((pv) => (
-              <div key={pv.id} className="p-4 border rounded-lg">
+              <div key={pv.id} className="rounded-lg border p-4">
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">SKU</label>
@@ -272,7 +269,9 @@ export default function ProductVariants({
                     <input
                       type="number"
                       value={pv.price}
-                      onChange={(e) => updateProductVariant(pv.id, 'price', parseFloat(e.target.value))}
+                      onChange={(e) =>
+                        updateProductVariant(pv.id, 'price', parseFloat(e.target.value))
+                      }
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       min="0"
                       step="0.01"
@@ -283,7 +282,9 @@ export default function ProductVariants({
                     <input
                       type="number"
                       value={pv.stock}
-                      onChange={(e) => updateProductVariant(pv.id, 'stock', parseInt(e.target.value))}
+                      onChange={(e) =>
+                        updateProductVariant(pv.id, 'stock', parseInt(e.target.value))
+                      }
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       min="0"
                     />
@@ -313,18 +314,18 @@ export default function ProductVariants({
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
         >
           Cancel
         </button>
         <button
           type="button"
           onClick={() => formik.handleSubmit()}
-          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
         >
           Save Variants
         </button>
       </div>
     </div>
   );
-} 
+}

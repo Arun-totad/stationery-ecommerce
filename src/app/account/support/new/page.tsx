@@ -1,22 +1,30 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
-import { collection, addDoc, Timestamp, doc, getDoc, setDoc, runTransaction } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { toast } from "react-hot-toast";
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import {
+  collection,
+  addDoc,
+  Timestamp,
+  doc,
+  getDoc,
+  setDoc,
+  runTransaction,
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { toast } from 'react-hot-toast';
 import { UserRole } from '@/types';
 
 export default function NewSupportTicketPage() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const orderId = searchParams.get("orderId") || "";
-  const [orderNumber, setOrderNumber] = useState<string>("");
+  const orderId = searchParams.get('orderId') || '';
+  const [orderNumber, setOrderNumber] = useState<string>('');
   const [loadingOrder, setLoadingOrder] = useState(false);
-  const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -24,7 +32,7 @@ export default function NewSupportTicketPage() {
       if (orderId) {
         setLoadingOrder(true);
         try {
-          const orderRef = doc(db, "orders", orderId);
+          const orderRef = doc(db, 'orders', orderId);
           const orderSnap = await getDoc(orderRef);
           if (orderSnap.exists()) {
             const data = orderSnap.data();
@@ -49,11 +57,11 @@ export default function NewSupportTicketPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject || !message) {
-      toast.error("Please fill in all fields.");
+      toast.error('Please fill in all fields.');
       return;
     }
     if (!user) {
-      toast.error("You must be logged in to create a support ticket.");
+      toast.error('You must be logged in to create a support ticket.');
       return;
     }
     setLoading(true);
@@ -73,15 +81,19 @@ export default function NewSupportTicketPage() {
           lastNumbers = metaSnap.data().lastNumbers || {};
         }
         ticketCounter = (lastNumbers[dateStr] || 0) + 1;
-        transaction.set(ticketMetaRef, { lastNumbers: { ...lastNumbers, [dateStr]: ticketCounter } }, { merge: true });
+        transaction.set(
+          ticketMetaRef,
+          { lastNumbers: { ...lastNumbers, [dateStr]: ticketCounter } },
+          { merge: true }
+        );
       });
       const ticketId = `TICKET-${dateStr}-${String(ticketCounter).padStart(4, '0')}`;
       // Create the ticket with the custom ID
-      await setDoc(doc(db, "supportTickets", ticketId), {
+      await setDoc(doc(db, 'supportTickets', ticketId), {
         userId: user.uid,
         subject: subject.replace(/Order Issue:.*/, `Order Issue: ${orderNumber || orderId}`),
         orderId: orderId ? String(orderId) : undefined,
-        status: "open",
+        status: 'open',
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
         messages: [
@@ -90,69 +102,80 @@ export default function NewSupportTicketPage() {
             senderRole: (user.role || 'customer') as UserRole,
             messageText: message,
             timestamp: Timestamp.now().toDate(),
-          }
+          },
         ],
         ticketNumber: ticketId,
       });
-      toast.success("Support ticket created!");
-      router.push("/account/support");
+      toast.success('Support ticket created!');
+      router.push('/account/support');
     } catch (error) {
-      toast.error("Failed to create support ticket.");
+      toast.error('Failed to create support ticket.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-pink-50 to-white animate-fade-in-up">
+    <div className="animate-fade-in-up flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-pink-50 to-white">
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border-2 border-transparent animate-fade-in-up" style={{ borderImage: 'linear-gradient(90deg, #3B82F6 0%, #F472B6 100%) 1' }}
+        className="animate-fade-in-up w-full max-w-md rounded-3xl border-2 border-transparent bg-white p-8 shadow-2xl"
+        style={{ borderImage: 'linear-gradient(90deg, #3B82F6 0%, #F472B6 100%) 1' }}
       >
-        <div className="flex items-center gap-2 mb-6">
-          <svg className="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" /></svg>
-          <h1 className="text-2xl font-extrabold bg-gradient-to-r from-blue-500 to-pink-400 bg-clip-text text-transparent">Create Support Ticket</h1>
+        <div className="mb-6 flex items-center gap-2">
+          <svg
+            className="h-7 w-7 text-blue-500"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path d="M12 4v16m8-8H4" />
+          </svg>
+          <h1 className="bg-gradient-to-r from-blue-500 to-pink-400 bg-clip-text text-2xl font-extrabold text-transparent">
+            Create Support Ticket
+          </h1>
         </div>
-        <hr className="mb-6 border-0 h-1 bg-gradient-to-r from-blue-400 via-pink-300 to-blue-400 rounded-full" />
+        <hr className="mb-6 h-1 rounded-full border-0 bg-gradient-to-r from-blue-400 via-pink-300 to-blue-400" />
         {orderId && (
           <div className="mb-4">
-            <label className="block text-gray-700 font-medium mb-1">Order Number</label>
+            <label className="mb-1 block font-medium text-gray-700">Order Number</label>
             <input
               type="text"
-              value={loadingOrder ? "Loading..." : orderNumber}
+              value={loadingOrder ? 'Loading...' : orderNumber}
               disabled
-              className="w-full px-3 py-2 border border-blue-200 rounded bg-blue-50 text-blue-900 font-mono font-semibold focus:outline-none focus:ring-2 focus:ring-blue-200 transition"
+              className="w-full rounded border border-blue-200 bg-blue-50 px-3 py-2 font-mono font-semibold text-blue-900 transition focus:ring-2 focus:ring-blue-200 focus:outline-none"
             />
           </div>
         )}
         <div className="mb-4">
-          <label className="block text-gray-700 font-medium mb-1">Subject</label>
+          <label className="mb-1 block font-medium text-gray-700">Subject</label>
           <input
             type="text"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            className={`w-full px-3 py-2 rounded font-semibold text-gray-900 bg-blue-50 border border-blue-200 focus:outline-none focus:ring-2 focus:ring-pink-200 focus:border-pink-400 transition placeholder-gray-400 ${orderId ? 'bg-blue-100 text-blue-700 font-bold' : ''}`}
+            className={`w-full rounded border border-blue-200 bg-blue-50 px-3 py-2 font-semibold text-gray-900 placeholder-gray-400 transition focus:border-pink-400 focus:ring-2 focus:ring-pink-200 focus:outline-none ${orderId ? 'bg-blue-100 font-bold text-blue-700' : ''}`}
             placeholder="Subject"
             disabled={!!orderId}
           />
         </div>
         <div className="mb-6">
-          <label className="block text-gray-700 font-medium mb-1">Message</label>
+          <label className="mb-1 block font-medium text-gray-700">Message</label>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className="w-full px-3 py-3 rounded border border-blue-200 bg-blue-50 text-gray-900 text-base font-medium focus:outline-none focus:ring-2 focus:ring-pink-200 focus:border-pink-400 transition min-h-[120px] placeholder-gray-400"
+            className="min-h-[120px] w-full rounded border border-blue-200 bg-blue-50 px-3 py-3 text-base font-medium text-gray-900 placeholder-gray-400 transition focus:border-pink-400 focus:ring-2 focus:ring-pink-200 focus:outline-none"
             placeholder="Describe your issue..."
           />
         </div>
         <button
           type="submit"
-          className="w-full bg-gradient-to-r from-blue-500 to-pink-400 text-white py-3 px-6 rounded-xl text-lg font-bold shadow hover:scale-105 hover:shadow-lg transition-all duration-200"
+          className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-pink-400 px-6 py-3 text-lg font-bold text-white shadow transition-all duration-200 hover:scale-105 hover:shadow-lg"
           disabled={loading}
         >
-          {loading ? "Submitting..." : "Submit Ticket"}
+          {loading ? 'Submitting...' : 'Submit Ticket'}
         </button>
       </form>
     </div>
   );
-} 
+}

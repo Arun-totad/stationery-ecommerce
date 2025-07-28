@@ -151,5 +151,16 @@ service cloud.firestore {
     match /userMeta/numbering {
       allow get, update, create: if request.auth != null;
     }
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Allow users to read their own notifications
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Allow users to create notifications for themselves
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Allow users to update (e.g., mark as read) their own notifications
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Only admins can delete notifications
+      allow delete: if isAdmin() || isAdminManager();
+    }
   }
 } 

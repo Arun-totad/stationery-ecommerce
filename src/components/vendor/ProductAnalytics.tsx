@@ -63,7 +63,7 @@ export default function ProductAnalytics({ productId, timeRange }: ProductAnalyt
           orderBy('timestamp', 'asc')
         );
         const viewsSnapshot = await getDocs(viewsQuery);
-        const viewsData = viewsSnapshot.docs.map(doc => ({
+        const viewsData = viewsSnapshot.docs.map((doc) => ({
           timestamp: doc.data().timestamp.toDate(),
           count: 1,
         }));
@@ -76,7 +76,7 @@ export default function ProductAnalytics({ productId, timeRange }: ProductAnalyt
           orderBy('createdAt', 'asc')
         );
         const ordersSnapshot = await getDocs(ordersQuery);
-        const ordersData = ordersSnapshot.docs.map(doc => ({
+        const ordersData = ordersSnapshot.docs.map((doc) => ({
           ...doc.data(),
           id: doc.id,
         })) as Order[];
@@ -123,7 +123,7 @@ export default function ProductAnalytics({ productId, timeRange }: ProductAnalyt
     const groupedData = new Map<string, AnalyticsData>();
 
     // Process views
-    viewsData.forEach(view => {
+    viewsData.forEach((view) => {
       const dateKey = formatDate(view.timestamp, timeRange);
       const existing = groupedData.get(dateKey) || {
         views: 0,
@@ -136,7 +136,7 @@ export default function ProductAnalytics({ productId, timeRange }: ProductAnalyt
     });
 
     // Process orders
-    ordersData.forEach(order => {
+    ordersData.forEach((order) => {
       const dateKey = formatDate(order.createdAt, timeRange);
       const existing = groupedData.get(dateKey) || {
         views: 0,
@@ -144,7 +144,7 @@ export default function ProductAnalytics({ productId, timeRange }: ProductAnalyt
         revenue: 0,
         date: dateKey,
       };
-      const productItems = order.items.filter(item => item.productId === productId);
+      const productItems = order.items.filter((item) => item.productId === productId);
       existing.sales += productItems.reduce((sum, item) => sum + item.quantity, 0);
       existing.revenue += productItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
       groupedData.set(dateKey, existing);
@@ -177,7 +177,7 @@ export default function ProductAnalytics({ productId, timeRange }: ProductAnalyt
       (sum, order) =>
         sum +
         order.items
-          .filter(item => item.productId === productId)
+          .filter((item) => item.productId === productId)
           .reduce((itemSum, item) => itemSum + item.quantity, 0),
       0
     );
@@ -185,7 +185,7 @@ export default function ProductAnalytics({ productId, timeRange }: ProductAnalyt
       (sum, order) =>
         sum +
         order.items
-          .filter(item => item.productId === productId)
+          .filter((item) => item.productId === productId)
           .reduce((itemSum, item) => itemSum + item.price * item.quantity, 0),
       0
     );
@@ -201,8 +201,8 @@ export default function ProductAnalytics({ productId, timeRange }: ProductAnalyt
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -211,35 +211,37 @@ export default function ProductAnalytics({ productId, timeRange }: ProductAnalyt
     <div className="space-y-6">
       {/* Metrics Overview */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="overflow-hidden rounded-lg bg-white shadow">
           <div className="px-4 py-5 sm:p-6">
-            <dt className="text-sm font-medium text-gray-500 truncate">Total Views</dt>
+            <dt className="truncate text-sm font-medium text-gray-500">Total Views</dt>
             <dd className="mt-1 text-3xl font-semibold text-gray-900">{metrics.totalViews}</dd>
           </div>
         </div>
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="overflow-hidden rounded-lg bg-white shadow">
           <div className="px-4 py-5 sm:p-6">
-            <dt className="text-sm font-medium text-gray-500 truncate">Total Sales</dt>
+            <dt className="truncate text-sm font-medium text-gray-500">Total Sales</dt>
             <dd className="mt-1 text-3xl font-semibold text-gray-900">{metrics.totalSales}</dd>
           </div>
         </div>
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="overflow-hidden rounded-lg bg-white shadow">
           <div className="px-4 py-5 sm:p-6">
-            <dt className="text-sm font-medium text-gray-500 truncate">Total Revenue</dt>
-            <dd className="mt-1 text-3xl font-semibold text-gray-900">₹{metrics.totalRevenue.toFixed(2)}</dd>
-          </div>
-        </div>
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <dt className="text-sm font-medium text-gray-500 truncate">Average Order Value</dt>
+            <dt className="truncate text-sm font-medium text-gray-500">Total Revenue</dt>
             <dd className="mt-1 text-3xl font-semibold text-gray-900">
-              ₹{metrics.averageOrderValue.toFixed(2)}
+              ${metrics.totalRevenue.toFixed(2)}
             </dd>
           </div>
         </div>
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="overflow-hidden rounded-lg bg-white shadow">
           <div className="px-4 py-5 sm:p-6">
-            <dt className="text-sm font-medium text-gray-500 truncate">Conversion Rate</dt>
+            <dt className="truncate text-sm font-medium text-gray-500">Average Order Value</dt>
+            <dd className="mt-1 text-3xl font-semibold text-gray-900">
+              ${metrics.averageOrderValue.toFixed(2)}
+            </dd>
+          </div>
+        </div>
+        <div className="overflow-hidden rounded-lg bg-white shadow">
+          <div className="px-4 py-5 sm:p-6">
+            <dt className="truncate text-sm font-medium text-gray-500">Conversion Rate</dt>
             <dd className="mt-1 text-3xl font-semibold text-gray-900">
               {metrics.conversionRate.toFixed(1)}%
             </dd>
@@ -250,8 +252,8 @@ export default function ProductAnalytics({ productId, timeRange }: ProductAnalyt
       {/* Charts */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Views and Sales Chart */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Views and Sales</h3>
+        <div className="rounded-lg bg-white p-6 shadow">
+          <h3 className="mb-4 text-lg font-medium text-gray-900">Views and Sales</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={analyticsData}>
@@ -281,8 +283,8 @@ export default function ProductAnalytics({ productId, timeRange }: ProductAnalyt
         </div>
 
         {/* Revenue Chart */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Revenue</h3>
+        <div className="rounded-lg bg-white p-6 shadow">
+          <h3 className="mb-4 text-lg font-medium text-gray-900">Revenue</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analyticsData}>
@@ -291,7 +293,7 @@ export default function ProductAnalytics({ productId, timeRange }: ProductAnalyt
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="revenue" fill="#8B5CF6" name="Revenue (₹)" />
+                <Bar dataKey="revenue" fill="#8B5CF6" name="Revenue ($)" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -299,4 +301,4 @@ export default function ProductAnalytics({ productId, timeRange }: ProductAnalyt
       </div>
     </div>
   );
-} 
+}

@@ -18,7 +18,13 @@ interface AuthContextType {
   userRole: UserRole | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string, role: UserRole, phoneNumber: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string,
+    name: string,
+    role: UserRole,
+    phoneNumber: string
+  ) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   refreshUserData: () => Promise<void>;
@@ -38,26 +44,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (userDoc.exists()) {
           const data = userDoc.data();
 
-          const createdAtDate = data.createdAt instanceof Timestamp 
-            ? data.createdAt.toDate() 
-            : new Date(data.createdAt);
-          const updatedAtDate = data.updatedAt instanceof Timestamp 
-            ? data.updatedAt.toDate() 
-            : new Date(data.updatedAt);
+          const createdAtDate =
+            data.createdAt instanceof Timestamp
+              ? data.createdAt.toDate()
+              : new Date(data.createdAt);
+          const updatedAtDate =
+            data.updatedAt instanceof Timestamp
+              ? data.updatedAt.toDate()
+              : new Date(data.updatedAt);
 
           const updatedUser = {
             uid: auth.currentUser.uid,
             email: auth.currentUser.email || '',
             displayName: data.displayName || '',
             phoneNumber: data.phoneNumber || null,
-            addresses: data.addresses || [{ street: '', city: '', state: '', zipCode: '', country: '' }],
+            addresses: data.addresses || [
+              { street: '', city: '', state: '', zipCode: '', country: '' },
+            ],
             role: data.role,
             createdAt: createdAtDate,
             updatedAt: updatedAtDate,
-            ...(data.role === 'vendor' && { 
-              shopName: (data as any).shopName || '', 
-              isVerified: (data as any).isVerified || false, 
-              products: (data as any).products || [] 
+            ...(data.role === 'vendor' && {
+              shopName: (data as any).shopName || '',
+              isVerified: (data as any).isVerified || false,
+              products: (data as any).products || [],
             }),
           } as User;
           setUser(updatedUser);
@@ -111,7 +121,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signInWithEmailAndPassword(auth, email, password);
       await refreshUserData();
     } catch (error: any) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'auth/invalid-credential') {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'auth/invalid-credential'
+      ) {
         const customError = new Error('Invalid email or password.');
         (customError as any).code = 'auth/invalid-credential';
         throw customError;
@@ -120,7 +135,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, name: string, role: UserRole, phoneNumber: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    name: string,
+    role: UserRole,
+    phoneNumber: string
+  ) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
@@ -193,4 +214,4 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-} 
+}

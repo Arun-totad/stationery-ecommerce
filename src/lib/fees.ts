@@ -9,4 +9,4 @@ export function calculateDeliveryFee(subtotal: number): number {
 
 export function calculateServiceFee(subtotal: number): number {
   return subtotal * 0.02; // 2% service fee
-} 
+}

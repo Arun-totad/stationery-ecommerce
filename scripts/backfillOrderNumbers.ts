@@ -16,14 +16,16 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 // It's crucial to load the service account key securely.
 // For production, consider using Google Cloud environment variables or a secrets manager.
 // For local development, place `serviceAccountKey.json` in the root of your project
-const serviceAccount = require(path.resolve(process.cwd(), './serviceAccountKey.json')) as ServiceAccount;
+const serviceAccount = require(
+  path.resolve(process.cwd(), './serviceAccountKey.json')
+) as ServiceAccount;
 
 const firebaseAdminConfig = {
-  credential: require("firebase-admin").credential.cert(serviceAccount),
+  credential: require('firebase-admin').credential.cert(serviceAccount),
 };
 
 // Initialize Firebase Admin SDK
-const admin = require("firebase-admin");
+const admin = require('firebase-admin');
 const app = !admin.apps.length ? admin.initializeApp(firebaseAdminConfig) : admin.app();
 const db: Firestore = admin.firestore(); // Explicitly type db as Firestore
 
@@ -49,8 +51,8 @@ async function getNextOrderNumber(firestoreDb: Firestore): Promise<number> {
     });
     return newOrderNumber;
   } catch (e) {
-    console.error("Transaction failed in getNextOrderNumber: ", e);
-    throw new Error("Failed to get next order number");
+    console.error('Transaction failed in getNextOrderNumber: ', e);
+    throw new Error('Failed to get next order number');
   }
 }
 
@@ -87,24 +89,28 @@ async function backfillOrderNumbers() {
     });
 
     // Sort orders by createdAt to ensure sequential numbering based on creation time
-    const ordersToUpdate = querySnapshot.docs.map((doc: QueryDocumentSnapshot) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
-        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt),
-      } as Order;
-    }).sort((a: Order, b: Order) => a.createdAt.getTime() - b.createdAt.getTime()); // Explicitly type a and b
+    const ordersToUpdate = querySnapshot.docs
+      .map((doc: QueryDocumentSnapshot) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt),
+        } as Order;
+      })
+      .sort((a: Order, b: Order) => a.createdAt.getTime() - b.createdAt.getTime()); // Explicitly type a and b
 
     // Assign sequential numbers and prepare updates
     for (const orderDoc of ordersToUpdate) {
       lastAssignedOrderNumber++;
       const orderRef = db.doc(`orders/${orderDoc.id}`); // Use db.doc
       console.log(`Assigning order #${lastAssignedOrderNumber} to order ID: ${orderDoc.id}`);
-      updates.push(db.runTransaction(async (transaction: Transaction) => {
-        transaction.update(orderRef, { orderNumber: lastAssignedOrderNumber });
-      }));
+      updates.push(
+        db.runTransaction(async (transaction: Transaction) => {
+          transaction.update(orderRef, { orderNumber: lastAssignedOrderNumber });
+        })
+      );
     }
 
     // Execute all order updates
@@ -127,4 +133,4 @@ async function backfillOrderNumbers() {
   }
 }
 
-backfillOrderNumbers(); 
+backfillOrderNumbers();

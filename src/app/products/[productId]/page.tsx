@@ -10,7 +10,18 @@ import { toast } from 'react-hot-toast';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
-import { FaBoxOpen, FaCheckCircle, FaTimesCircle, FaTag, FaLayerGroup, FaIndustry, FaShoppingCart, FaShoppingBag, FaArrowRight, FaArrowLeft } from 'react-icons/fa';
+import {
+  FaBoxOpen,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaTag,
+  FaLayerGroup,
+  FaIndustry,
+  FaShoppingCart,
+  FaShoppingBag,
+  FaArrowRight,
+  FaArrowLeft,
+} from 'react-icons/fa';
 
 export default function ProductDetailPage() {
   const router = useRouter();
@@ -38,7 +49,7 @@ export default function ProductDetailPage() {
           console.log('Product ID:', productId);
           console.log('Current Cart Items:', cartItems);
 
-          const existingCartItem = cartItems.find(item => item.id === productId);
+          const existingCartItem = cartItems.find((item) => item.id === productId);
           console.log('Existing Cart Item for this product:', existingCartItem);
 
           if (existingCartItem) {
@@ -75,8 +86,8 @@ export default function ProductDetailPage() {
         );
         const vendorSnap = await getDocs(vendorQuery);
         const related = vendorSnap.docs
-          .map(doc => ({ id: doc.id, ...doc.data() } as Product))
-          .filter(p => p.id !== product.id);
+          .map((doc) => ({ id: doc.id, ...doc.data() }) as Product)
+          .filter((p) => p.id !== product.id);
         setRelatedProducts(related.slice(0, 8));
       } catch (err) {
         // Fail silently for related products
@@ -87,7 +98,7 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
+      <div className="flex min-h-screen items-center justify-center bg-gray-100">
         <p className="text-gray-700">Loading product details...</p>
       </div>
     );
@@ -95,7 +106,7 @@ export default function ProductDetailPage() {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
+      <div className="flex min-h-screen items-center justify-center bg-gray-100">
         <p className="text-red-500">{error}</p>
       </div>
     );
@@ -108,10 +119,10 @@ export default function ProductDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-10">
       <div className="container mx-auto px-4">
-        <div className="bg-white/70 backdrop-blur rounded-2xl shadow-2xl p-10 relative">
+        <div className="relative rounded-2xl bg-white/70 p-10 shadow-2xl backdrop-blur">
           {/* Back Button */}
           <button
-            className="absolute -top-6 left-4 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-400 to-pink-400 text-white rounded-full shadow-lg font-semibold hover:scale-105 hover:shadow-xl transition-all z-10"
+            className="absolute -top-6 left-4 z-10 flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-400 to-pink-400 px-4 py-2 font-semibold text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl"
             onClick={() => {
               if (product?.vendorId) {
                 window.location.href = `/products?vendor=${product.vendorId}`;
@@ -122,11 +133,11 @@ export default function ProductDetailPage() {
           >
             <FaArrowLeft className="text-lg" /> Back to Products
           </button>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+          <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2">
             {/* Product Image Gallery */}
             <div>
               {product.images && product.images.length > 0 ? (
-                <div className="relative w-full h-96 rounded-xl overflow-hidden border-2 border-blue-100 shadow-lg bg-gradient-to-br from-gray-100 via-blue-50 to-purple-50 flex items-center justify-center">
+                <div className="relative flex h-96 w-full items-center justify-center overflow-hidden rounded-xl border-2 border-blue-100 bg-gradient-to-br from-gray-100 via-blue-50 to-purple-50 shadow-lg">
                   <Image
                     src={product.images[0]}
                     alt={product.name}
@@ -136,30 +147,37 @@ export default function ProductDetailPage() {
                   />
                 </div>
               ) : (
-                <div className="w-full h-96 bg-gradient-to-br from-gray-200 via-blue-100 to-purple-100 flex flex-col items-center justify-center rounded-xl shadow-lg border-2 border-blue-100">
-                  <FaBoxOpen className="text-6xl text-gray-400 mb-4" />
-                  <span className="text-gray-500 text-lg font-medium">No Image Available</span>
+                <div className="flex h-96 w-full flex-col items-center justify-center rounded-xl border-2 border-blue-100 bg-gradient-to-br from-gray-200 via-blue-100 to-purple-100 shadow-lg">
+                  <FaBoxOpen className="mb-4 text-6xl text-gray-400" />
+                  <span className="text-lg font-medium text-gray-500">No Image Available</span>
                 </div>
               )}
             </div>
 
             {/* Product Details */}
-            <div className="flex flex-col justify-between h-full">
+            <div className="flex h-full flex-col justify-between">
               <div>
-                <h1 className="text-4xl font-extrabold text-gray-900 mb-2 inline-block relative">
+                <h1 className="relative mb-2 inline-block text-4xl font-extrabold text-gray-900">
                   {product.name}
-                  <span className="block h-1 w-1/2 bg-gradient-to-r from-pink-400 via-blue-400 to-purple-400 rounded-full mt-2"></span>
+                  <span className="mt-2 block h-1 w-1/2 rounded-full bg-gradient-to-r from-pink-400 via-blue-400 to-purple-400"></span>
                 </h1>
-                <p className="text-gray-700 text-lg mb-6 leading-relaxed flex items-center gap-2"><FaTag className="text-blue-400" /> {product.description}</p>
-                <div className="flex items-center mb-4 gap-4">
+                <p className="mb-6 flex items-center gap-2 text-lg leading-relaxed text-gray-700">
+                  <FaTag className="text-blue-400" /> {product.description}
+                </p>
+                <div className="mb-4 flex items-center gap-4">
                   {/* Price badge */}
-                  <span className="bg-gradient-to-r from-pink-400 to-blue-400 text-white px-5 py-2 rounded-full text-2xl font-bold shadow flex items-center gap-2">
-                    ₹{product.price.toFixed(2)}
+                  <span className="flex items-center gap-2 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 px-5 py-2 text-2xl font-bold text-white shadow">
+                    ${product.price.toFixed(2)}
                   </span>
                   {/* Stock badge */}
-                  <span className={`px-4 py-2 rounded-full text-lg font-semibold shadow flex items-center gap-2 ${product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>{product.stock > 0 ? <FaCheckCircle /> : <FaTimesCircle />} {product.stock > 0 ? 'In Stock' : 'Out of Stock'}</span>
+                  <span
+                    className={`flex items-center gap-2 rounded-full px-4 py-2 text-lg font-semibold shadow ${product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}
+                  >
+                    {product.stock > 0 ? <FaCheckCircle /> : <FaTimesCircle />}{' '}
+                    {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                  </span>
                 </div>
-                <div className="flex items-center gap-6 mb-6">
+                <div className="mb-6 flex items-center gap-6">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <FaLayerGroup className="text-blue-400" />
                     <span className="font-medium">Category:</span> {product.category}
@@ -176,10 +194,10 @@ export default function ProductDetailPage() {
                 {userRole !== 'vendor' && (
                   <div className="flex flex-col space-y-4">
                     <div className="flex items-center space-x-4">
-                      <div className="flex items-center border border-blue-200 rounded-full overflow-hidden shadow bg-white/80">
+                      <div className="flex items-center overflow-hidden rounded-full border border-blue-200 bg-white/80 shadow">
                         <button
-                          onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
-                          className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed text-xl font-bold"
+                          onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                          className="bg-blue-100 px-4 py-2 text-xl font-bold text-blue-700 hover:bg-blue-200 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                           disabled={quantity <= 1}
                         >
                           -
@@ -203,11 +221,12 @@ export default function ProductDetailPage() {
                               setQuantity(product.stock); // Cap at max stock
                             }
                           }}
-                          className="w-16 text-center text-2xl font-extrabold border-l border-r border-blue-200 py-2 focus:outline-none focus:border-blue-400 focus:ring-blue-400 text-blue-700 bg-transparent"
+                          className="hide-number-arrows w-16 border-r border-l border-blue-200 bg-transparent py-2 text-center text-2xl font-extrabold text-blue-700 focus:border-blue-400 focus:ring-blue-400 focus:outline-none"
+                          style={{ MozAppearance: 'textfield' }}
                         />
                         <button
-                          onClick={() => setQuantity(prev => Math.min(product.stock, prev + 1))}
-                          className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed text-xl font-bold"
+                          onClick={() => setQuantity((prev) => Math.min(product.stock, prev + 1))}
+                          className="bg-blue-100 px-4 py-2 text-xl font-bold text-blue-700 hover:bg-blue-200 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                           disabled={quantity >= product.stock}
                         >
                           +
@@ -217,63 +236,70 @@ export default function ProductDetailPage() {
                         onClick={async () => {
                           const success = await addToCart(product, quantity);
                           if (success) {
-                            toast.custom((t) => (
-                              <div className={`bg-white/80 backdrop-blur border border-green-200 shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-4 max-w-[340px] ${t.visible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-blue-400 shadow-lg">
-                                  <FaCheckCircle className="text-white text-xl" />
-                                </div>
-                                <div className="flex-1 text-center md:text-left">
-                                  <div className="text-lg font-bold text-green-700 mb-1 flex items-center justify-center md:justify-start gap-2">
-                                    {user ? 'Product added to cart!' : 'To add product to cart!'}
+                            toast.custom(
+                              (t) => (
+                                <div
+                                  className={`flex max-w-[340px] items-center gap-4 rounded-2xl border border-green-200 bg-white/80 px-6 py-4 shadow-2xl backdrop-blur ${t.visible ? 'animate-fade-in-up' : 'opacity-0'}`}
+                                >
+                                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-blue-400 shadow-lg">
+                                    <FaCheckCircle className="text-xl text-white" />
                                   </div>
-                                  {user ? (
-                                    <div className="text-gray-700 text-sm mb-2">You can continue shopping or proceed to checkout.</div>
-                                  ) : null}
-                                  <div className="flex flex-row gap-4 justify-center items-center mt-4 w-full max-w-xs mx-auto">
+                                  <div className="flex-1 text-center md:text-left">
+                                    <div className="mb-1 flex items-center justify-center gap-2 text-lg font-bold text-green-700 md:justify-start">
+                                      {user ? 'Product added to cart!' : 'To add product to cart!'}
+                                    </div>
                                     {user ? (
-                                      <>
+                                      <div className="mb-2 text-sm text-gray-700">
+                                        You can continue shopping or proceed to checkout.
+                                      </div>
+                                    ) : null}
+                                    <div className="mx-auto mt-4 flex w-full max-w-xs flex-row items-center justify-center gap-4">
+                                      {user ? (
+                                        <>
+                                          <button
+                                            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 px-0 py-3 text-base font-semibold text-white shadow-md transition-all hover:scale-105 focus:ring-2 focus:ring-blue-300 focus:outline-none"
+                                            style={{ minWidth: 0 }}
+                                            onClick={() => {
+                                              toast.dismiss(t.id);
+                                              router.push('/cart');
+                                            }}
+                                          >
+                                            <FaShoppingBag className="text-lg" />
+                                            <span>View Cart</span>
+                                          </button>
+                                          <button
+                                            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 px-0 py-3 text-base font-semibold text-white shadow-md transition-all hover:scale-105 focus:ring-2 focus:ring-pink-300 focus:outline-none"
+                                            style={{ minWidth: 0 }}
+                                            onClick={() => {
+                                              toast.dismiss(t.id);
+                                              router.push('/checkout');
+                                            }}
+                                          >
+                                            <FaArrowRight className="text-lg" />
+                                            <span>Checkout</span>
+                                          </button>
+                                        </>
+                                      ) : (
                                         <button
-                                          className="flex-1 flex items-center justify-center gap-2 px-0 py-3 rounded-full font-semibold text-base bg-gradient-to-r from-blue-400 to-purple-400 text-white shadow-md transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                                          style={{ minWidth: 0 }}
+                                          className="flex items-center gap-2 rounded-full bg-gradient-to-r from-red-400 to-pink-400 px-4 py-2 font-semibold text-white shadow transition-all duration-150 hover:scale-105"
                                           onClick={() => {
                                             toast.dismiss(t.id);
-                                            router.push('/cart');
+                                            router.push('/login');
                                           }}
                                         >
-                                          <FaShoppingBag className="text-lg" />
-                                          <span>View Cart</span>
+                                          <FaArrowRight /> Login to Checkout
                                         </button>
-                                        <button
-                                          className="flex-1 flex items-center justify-center gap-2 px-0 py-3 rounded-full font-semibold text-base bg-gradient-to-r from-pink-400 to-blue-400 text-white shadow-md transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-pink-300"
-                                          style={{ minWidth: 0 }}
-                                          onClick={() => {
-                                            toast.dismiss(t.id);
-                                            router.push('/checkout');
-                                          }}
-                                        >
-                                          <FaArrowRight className="text-lg" />
-                                          <span>Checkout</span>
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <button
-                                        className="px-4 py-2 bg-gradient-to-r from-red-400 to-pink-400 text-white rounded-full font-semibold flex items-center gap-2 shadow hover:scale-105 transition-all duration-150"
-                                        onClick={() => {
-                                          toast.dismiss(t.id);
-                                          router.push('/login');
-                                        }}
-                                      >
-                                        <FaArrowRight /> Login to Checkout
-                                      </button>
-                                    )}
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ), { position: 'bottom-center', duration: 4000 });
+                              ),
+                              { position: 'bottom-center', duration: 4000 }
+                            );
                           }
                         }}
                         disabled={product.stock === 0 || quantity === 0}
-                        className="flex-grow bg-gradient-to-r from-blue-400 to-pink-400 text-white py-3 px-6 rounded-full text-lg font-semibold hover:scale-105 hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex flex-grow items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-400 to-pink-400 px-6 py-3 text-lg font-semibold text-white transition-all duration-200 hover:scale-105 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <FaShoppingCart /> {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
                       </button>
@@ -289,37 +315,47 @@ export default function ProductDetailPage() {
       {/* Related Products Section */}
       {relatedProducts.length > 0 && (
         <div className="mt-16">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">You may also like</h2>
+          <h2 className="mb-6 text-center text-2xl font-bold text-gray-900">You may also like</h2>
           <div className="flex gap-6 overflow-x-auto pb-2">
             {relatedProducts.map((rel) => (
-              <div key={rel.id} className="min-w-[260px] bg-white/80 backdrop-blur rounded-2xl shadow-xl overflow-hidden flex flex-col border border-gray-100 hover:border-blue-300 hover:scale-[1.03] hover:ring-2 hover:ring-blue-100 transition-all duration-200">
-                <div className="relative w-full h-40 bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 flex items-center justify-center">
+              <div
+                key={rel.id}
+                className="flex min-w-[260px] flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white/80 shadow-xl backdrop-blur transition-all duration-200 hover:scale-[1.03] hover:border-blue-300 hover:ring-2 hover:ring-blue-100"
+              >
+                <div className="relative flex h-40 w-full items-center justify-center bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200">
                   {rel.images && rel.images.length > 0 ? (
                     <Image
                       src={rel.images[0]}
                       alt={rel.name}
                       fill
                       style={{ objectFit: 'cover' }}
-                      className="hover:scale-105 transition-transform duration-200 rounded-b-none"
+                      className="rounded-b-none transition-transform duration-200 hover:scale-105"
                     />
                   ) : (
                     <span className="flex flex-col items-center text-gray-400">
-                      <FaBoxOpen className="text-3xl mb-2" />
+                      <FaBoxOpen className="mb-2 text-3xl" />
                       No Image
                     </span>
                   )}
                   {/* Price badge */}
-                  <span className="absolute top-2 right-2 bg-gradient-to-r from-pink-400 to-blue-400 text-white px-3 py-1 rounded-full text-sm font-bold shadow">₹{rel.price.toFixed(2)}</span>
+                  <span className="absolute top-2 right-2 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 px-3 py-1 text-sm font-bold text-white shadow">
+                    ${rel.price.toFixed(2)}
+                  </span>
                 </div>
-                <div className="p-4 flex flex-col flex-grow">
-                  <h3 className="text-lg font-bold text-gray-800 mb-1 truncate">{rel.name}</h3>
-                  <p className="text-gray-600 text-xs mb-2 line-clamp-2">{rel.description}</p>
-                  <div className="flex items-center justify-between mt-auto">
-                    <span className={`text-xs font-semibold flex items-center gap-1 ${rel.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>{rel.stock > 0 ? <FaCheckCircle /> : <FaTimesCircle />} {rel.stock > 0 ? 'In Stock' : 'Out of Stock'}</span>
+                <div className="flex flex-grow flex-col p-4">
+                  <h3 className="mb-1 truncate text-lg font-bold text-gray-800">{rel.name}</h3>
+                  <p className="mb-2 line-clamp-2 text-xs text-gray-600">{rel.description}</p>
+                  <div className="mt-auto flex items-center justify-between">
+                    <span
+                      className={`flex items-center gap-1 text-xs font-semibold ${rel.stock > 0 ? 'text-green-600' : 'text-red-600'}`}
+                    >
+                      {rel.stock > 0 ? <FaCheckCircle /> : <FaTimesCircle />}{' '}
+                      {rel.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                    </span>
                     <button
                       onClick={() => addToCart(rel, 1)}
                       disabled={rel.stock === 0}
-                      className="bg-gradient-to-r from-blue-400 to-pink-400 text-white px-3 py-1 rounded-full flex items-center gap-2 shadow hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-400 to-pink-400 px-3 py-1 text-white shadow transition-all duration-200 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <FaShoppingCart /> Add
                     </button>
@@ -332,4 +368,4 @@ export default function ProductDetailPage() {
       )}
     </div>
   );
-} 
+}

@@ -49,7 +49,7 @@ export default function OrderConfirmationPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <p className="text-gray-700">Loading...</p>
       </div>
     );
@@ -63,33 +63,33 @@ export default function OrderConfirmationPage() {
   return (
     <ProtectedRoute allowedRoles={['customer', 'vendor', 'admin', 'admin-manager']}>
       <Confetti />
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 flex items-center justify-center py-12 px-4">
-        <div className="relative max-w-md w-full bg-white/90 p-10 rounded-3xl shadow-2xl border border-blue-100 flex flex-col items-center animate-fade-in">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 px-4 py-12">
+        <div className="animate-fade-in relative flex w-full max-w-md flex-col items-center rounded-3xl border border-blue-100 bg-white/90 p-10 shadow-2xl">
           {/* Decorative Gradient Icon */}
-          <span className="absolute -top-12 left-1/2 -translate-x-1/2 inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 via-yellow-300 to-pink-400 shadow-lg border-4 border-white">
+          <span className="absolute -top-12 left-1/2 inline-flex h-24 w-24 -translate-x-1/2 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-blue-500 via-yellow-300 to-pink-400 shadow-lg">
             <CheckCircleIcon className="h-16 w-16 text-white drop-shadow-lg" />
           </span>
           {/* Gradient Accent Bar */}
-          <div className="w-24 h-2 bg-gradient-to-r from-blue-400 to-pink-400 rounded-full mb-8 mt-16 mx-auto" />
-          <h1 className="text-center text-4xl md:text-5xl font-extrabold text-gray-900 mb-2 tracking-tight drop-shadow-sm">
+          <div className="mx-auto mt-16 mb-8 h-2 w-24 rounded-full bg-gradient-to-r from-blue-400 to-pink-400" />
+          <h1 className="mb-2 text-center text-4xl font-extrabold tracking-tight text-gray-900 drop-shadow-sm md:text-5xl">
             Order Placed Successfully!
           </h1>
-          <p className="text-center text-lg md:text-xl text-gray-700 mb-4 font-medium">
+          <p className="mb-4 text-center text-lg font-medium text-gray-700 md:text-xl">
             Thank you for your purchase. Your order is confirmed!
           </p>
           {orderId && (
-            <p className="text-center text-base text-blue-700 font-bold mb-4">
+            <p className="mb-4 text-center text-base font-bold text-blue-700">
               Order ID: <span className="font-mono">{orderId}</span>
             </p>
           )}
           <div className="mt-6 w-full space-y-4">
             <Link href="/account/orders" className="block">
-              <button className="w-full py-3 rounded-xl font-bold text-lg bg-gradient-to-r from-blue-500 to-pink-400 text-white shadow-lg hover:from-blue-600 hover:to-pink-500 transition-all">
+              <button className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-pink-400 py-3 text-lg font-bold text-white shadow-lg transition-all hover:from-blue-600 hover:to-pink-500">
                 View Your Orders
               </button>
             </Link>
             <Link href="/products" className="block">
-              <button className="w-full border border-blue-300 text-blue-700 py-3 rounded-xl text-lg font-bold bg-white hover:bg-blue-50 shadow transition-all">
+              <button className="w-full rounded-xl border border-blue-300 bg-white py-3 text-lg font-bold text-blue-700 shadow transition-all hover:bg-blue-50">
                 Continue Shopping
               </button>
             </Link>
@@ -98,4 +98,4 @@ export default function OrderConfirmationPage() {
       </div>
     </ProtectedRoute>
   );
-} 
+}

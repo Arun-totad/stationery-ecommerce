@@ -80,7 +80,7 @@ export default function EditProductPage() {
         }
 
         const productData = productSnap.data() as Product;
-        
+
         // Verify that the product belongs to the current vendor
         if (productData.vendorId !== user.uid) {
           toast.error('You do not have permission to edit this product');
@@ -176,7 +176,7 @@ export default function EditProductPage() {
 
     const imageToRemove = imageUrls[index];
     const newUrls = imageUrls.filter((_, i) => i !== index);
-    
+
     try {
       // Delete the image from Firebase Storage if it's not one of the original images
       if (!product.images.includes(imageToRemove)) {
@@ -211,18 +211,25 @@ export default function EditProductPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   if (!product) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50">
-        <div className="bg-white/80 p-8 rounded-2xl shadow text-center">
-          <p className="text-lg font-semibold text-red-600">Product not found or you do not have permission to edit this product.</p>
-          <button onClick={() => router.push('/vendor/products')} className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition">Go Back</button>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50">
+        <div className="rounded-2xl bg-white/80 p-8 text-center shadow">
+          <p className="text-lg font-semibold text-red-600">
+            Product not found or you do not have permission to edit this product.
+          </p>
+          <button
+            onClick={() => router.push('/vendor/products')}
+            className="mt-4 rounded-lg bg-blue-600 px-6 py-2 font-semibold text-white transition hover:bg-blue-700"
+          >
+            Go Back
+          </button>
         </div>
       </div>
     );
@@ -232,29 +239,31 @@ export default function EditProductPage() {
     <>
       <VendorDashboardNav />
       <ProtectedRoute allowedRoles={['vendor']}>
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 py-8 px-2 flex items-center justify-center">
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 px-2 py-8">
           <AnimatePresence>
             <motion.div
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 40 }}
               transition={{ duration: 0.6, ease: 'easeOut' }}
-              className="w-full max-w-2xl bg-white/80 backdrop-blur-lg p-8 rounded-3xl shadow-2xl border border-white/40"
+              className="w-full max-w-2xl rounded-3xl border border-white/40 bg-white/80 p-8 shadow-2xl backdrop-blur-lg"
             >
-              <h1 className="text-3xl font-extrabold text-gray-900 mb-8 text-center">Edit Product</h1>
+              <h1 className="mb-8 text-center text-3xl font-extrabold text-gray-900">
+                Edit Product
+              </h1>
               <form onSubmit={formik.handleSubmit} className="space-y-7">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div className="relative">
                     <input
                       type="text"
                       name="name"
                       value={formik.values.name}
                       onChange={formik.handleChange}
-                      className="peer w-full border border-gray-300 rounded-xl px-4 pt-6 pb-2 text-gray-900 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:bg-white transition-all duration-200 outline-none shadow-sm placeholder-transparent"
+                      className="peer w-full rounded-xl border border-gray-300 px-4 pt-6 pb-2 text-gray-900 placeholder-transparent shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200"
                       placeholder="Product Name"
                       required
                     />
-                    <label className="absolute left-4 top-2 text-gray-500 text-sm transition-all duration-200 peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm bg-white/80 px-1 rounded pointer-events-none">
+                    <label className="pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm">
                       Name
                     </label>
                   </div>
@@ -264,11 +273,11 @@ export default function EditProductPage() {
                       name="brand"
                       value={formik.values.brand}
                       onChange={formik.handleChange}
-                      className="peer w-full border border-gray-300 rounded-xl px-4 pt-6 pb-2 text-gray-900 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:bg-white transition-all duration-200 outline-none shadow-sm placeholder-transparent"
+                      className="peer w-full rounded-xl border border-gray-300 px-4 pt-6 pb-2 text-gray-900 placeholder-transparent shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200"
                       placeholder="Brand"
                       required
                     />
-                    <label className="absolute left-4 top-2 text-gray-500 text-sm transition-all duration-200 peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm bg-white/80 px-1 rounded pointer-events-none">
+                    <label className="pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm">
                       Brand
                     </label>
                   </div>
@@ -278,28 +287,28 @@ export default function EditProductPage() {
                     name="description"
                     value={formik.values.description}
                     onChange={formik.handleChange}
-                    className="peer w-full border border-gray-300 rounded-xl px-4 pt-6 pb-2 text-gray-900 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:bg-white transition-all duration-200 outline-none shadow-sm resize-none placeholder-transparent"
+                    className="peer w-full resize-none rounded-xl border border-gray-300 px-4 pt-6 pb-2 text-gray-900 placeholder-transparent shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200"
                     placeholder="Description"
                     rows={3}
                     required
                   />
-                  <label className="absolute left-4 top-2 text-gray-500 text-sm transition-all duration-200 peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm bg-white/80 px-1 rounded pointer-events-none">
+                  <label className="pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm">
                     Description
                   </label>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div className="relative">
                     <input
                       type="number"
                       name="price"
                       value={formik.values.price}
                       onChange={formik.handleChange}
-                      className="peer w-full border border-gray-300 rounded-xl px-4 pt-6 pb-2 text-gray-900 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:bg-white transition-all duration-200 outline-none shadow-sm placeholder-transparent"
+                      className="peer w-full rounded-xl border border-gray-300 px-4 pt-6 pb-2 text-gray-900 placeholder-transparent shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200"
                       placeholder="Price"
                       min={0}
                       required
                     />
-                    <label className="absolute left-4 top-2 text-gray-500 text-sm transition-all duration-200 peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm bg-white/80 px-1 rounded pointer-events-none">
+                    <label className="pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm">
                       Price (₹)
                     </label>
                   </div>
@@ -309,35 +318,41 @@ export default function EditProductPage() {
                       name="stock"
                       value={formik.values.stock}
                       onChange={formik.handleChange}
-                      className="peer w-full border border-gray-300 rounded-xl px-4 pt-6 pb-2 text-gray-900 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:bg-white transition-all duration-200 outline-none shadow-sm placeholder-transparent"
+                      className="peer w-full rounded-xl border border-gray-300 px-4 pt-6 pb-2 text-gray-900 placeholder-transparent shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200"
                       placeholder="Stock"
                       min={0}
                       required
                     />
-                    <label className="absolute left-4 top-2 text-gray-500 text-sm transition-all duration-200 peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm bg-white/80 px-1 rounded pointer-events-none">
+                    <label className="pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm">
                       Stock
                     </label>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex flex-col mb-4">
-                    <label htmlFor="category" className="mb-1 font-medium text-gray-700">Category</label>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div className="mb-4 flex flex-col">
+                    <label htmlFor="category" className="mb-1 font-medium text-gray-700">
+                      Category
+                    </label>
                     <select
                       id="category"
                       name="category"
                       value={formik.values.category}
                       onChange={formik.handleChange}
-                      className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:bg-white transition-all duration-200 outline-none shadow-sm"
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200"
                       required
                     >
-                      <option value="" disabled hidden>Select Category</option>
+                      <option value="" disabled hidden>
+                        Select Category
+                      </option>
                       {categories.map((cat) => (
-                        <option key={cat} value={cat}>{cat}</option>
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Images</label>
+                    <label className="mb-1 block text-sm font-semibold text-gray-700">Images</label>
                     <input
                       type="file"
                       accept="image/*"
@@ -346,14 +361,18 @@ export default function EditProductPage() {
                       className="mb-2"
                       disabled={uploading}
                     />
-                    <div className="flex gap-2 flex-wrap mt-2">
+                    <div className="mt-2 flex flex-wrap gap-2">
                       {imageUrls.map((url, idx) => (
-                        <div key={idx} className="relative group">
-                          <img src={url} alt="Product" className="h-20 w-20 object-cover rounded border" />
+                        <div key={idx} className="group relative">
+                          <img
+                            src={url}
+                            alt="Product"
+                            className="h-20 w-20 rounded border object-cover"
+                          />
                           <button
                             type="button"
                             onClick={() => removeImage(idx)}
-                            className="absolute top-0 right-0 bg-white bg-opacity-80 rounded-full p-1 text-red-600 hover:bg-red-100"
+                            className="bg-opacity-80 absolute top-0 right-0 rounded-full bg-white p-1 text-red-600 hover:bg-red-100"
                             title="Remove image"
                           >
                             ×
@@ -363,13 +382,13 @@ export default function EditProductPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-4 mt-8">
+                <div className="mt-8 flex gap-4">
                   <motion.button
                     type="button"
                     whileTap={{ scale: 0.97 }}
                     whileHover={{ scale: 1.03 }}
                     onClick={() => router.push('/vendor/products')}
-                    className="w-1/2 bg-gray-200 text-gray-700 py-3 px-6 rounded-xl text-lg font-semibold hover:bg-gray-300 focus:ring-2 focus:ring-blue-200 transition-all duration-200 border border-gray-300 shadow-sm active:scale-95"
+                    className="w-1/2 rounded-xl border border-gray-300 bg-gray-200 px-6 py-3 text-lg font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-300 focus:ring-2 focus:ring-blue-200 active:scale-95"
                     disabled={formik.isSubmitting || uploading}
                   >
                     Cancel
@@ -378,10 +397,10 @@ export default function EditProductPage() {
                     type="submit"
                     whileTap={{ scale: 0.97 }}
                     whileHover={{ scale: 1.03 }}
-                    className="w-1/2 bg-blue-600 text-white py-3 px-6 rounded-xl text-lg font-semibold hover:bg-blue-700 focus:ring-2 focus:ring-blue-200 transition-all duration-200 disabled:opacity-50 shadow-sm active:scale-95"
+                    className="w-1/2 rounded-xl bg-blue-600 px-6 py-3 text-lg font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-700 focus:ring-2 focus:ring-blue-200 active:scale-95 disabled:opacity-50"
                     disabled={formik.isSubmitting || uploading}
                   >
-                    {formik.isSubmitting ? "Saving..." : "Save Changes"}
+                    {formik.isSubmitting ? 'Saving...' : 'Save Changes'}
                   </motion.button>
                 </div>
               </form>
@@ -391,7 +410,7 @@ export default function EditProductPage() {
                   whileTap={{ scale: 0.97 }}
                   whileHover={{ scale: 1.03 }}
                   onClick={handleDeleteProduct}
-                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-xl shadow transition-all text-lg mt-2 focus:ring-2 focus:ring-red-300 active:scale-95"
+                  className="mt-2 flex items-center gap-2 rounded-xl bg-red-600 px-6 py-3 text-lg font-semibold text-white shadow transition-all hover:bg-red-700 focus:ring-2 focus:ring-red-300 active:scale-95"
                   disabled={formik.isSubmitting || uploading}
                 >
                   <TrashIcon className="h-5 w-5" />
@@ -402,27 +421,33 @@ export default function EditProductPage() {
           </AnimatePresence>
         </div>
         {/* Custom Delete Confirmation Modal */}
-        <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)} className="fixed z-50 inset-0 flex items-center justify-center">
+        <Dialog
+          open={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center"
+        >
           <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="bg-white rounded-2xl shadow-xl p-8 z-10 w-full max-w-md mx-auto flex flex-col items-center border border-gray-100"
+            className="z-10 mx-auto flex w-full max-w-md flex-col items-center rounded-2xl border border-gray-100 bg-white p-8 shadow-xl"
           >
-            <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mb-4" />
-            <Dialog.Title className="text-lg font-bold mb-2 text-center">Delete Product?</Dialog.Title>
+            <ExclamationTriangleIcon className="mb-4 h-12 w-12 text-red-500" />
+            <Dialog.Title className="mb-2 text-center text-lg font-bold">
+              Delete Product?
+            </Dialog.Title>
             <Dialog.Description className="mb-6 text-center text-gray-600">
               Are you sure you want to delete this product? <br /> This action cannot be undone.
             </Dialog.Description>
-            <div className="flex gap-4 w-full mt-2">
+            <div className="mt-2 flex w-full gap-4">
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.97 }}
                 whileHover={{ scale: 1.03 }}
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-semibold transition-all hover:bg-gray-100 active:scale-95"
+                className="flex-1 rounded-lg border border-gray-300 bg-white py-2 font-semibold text-gray-700 transition-all hover:bg-gray-100 active:scale-95"
               >
                 Cancel
               </motion.button>
@@ -431,7 +456,7 @@ export default function EditProductPage() {
                 whileTap={{ scale: 0.97 }}
                 whileHover={{ scale: 1.03 }}
                 onClick={confirmDeleteProduct}
-                className="flex-1 py-2 rounded-lg bg-red-600 text-white font-semibold transition-all hover:bg-red-700 active:scale-95"
+                className="flex-1 rounded-lg bg-red-600 py-2 font-semibold text-white transition-all hover:bg-red-700 active:scale-95"
               >
                 Delete
               </motion.button>
@@ -441,4 +466,4 @@ export default function EditProductPage() {
       </ProtectedRoute>
     </>
   );
-} 
+}

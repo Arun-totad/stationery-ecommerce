@@ -39,7 +39,7 @@ export default function VendorSignUpPage() {
     if (!validate()) return;
     setLoading(true);
     try {
-      await signUp(email, password, shopName, 'vendor', `+91${phone}`);
+      await signUp(email, password, shopName, 'vendor', `+1${phone}`);
       toast.success('Vendor account created successfully!');
       router.push('/');
     } catch (error: any) {
@@ -66,33 +66,41 @@ export default function VendorSignUpPage() {
   };
 
   useEffect(() => {
-    document.body.style.background = 'linear-gradient(135deg, #e0e7ff 0%, #fce7f3 50%, #fef9c3 100%)';
+    document.body.style.background =
+      'linear-gradient(135deg, #e0e7ff 0%, #fce7f3 50%, #fef9c3 100%)';
     return () => {
       document.body.style.background = '';
     };
   }, []);
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-blue-200 via-pink-100 to-yellow-100">
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-blue-200 via-pink-100 to-yellow-100">
       {/* Animated Blobs */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-pink-200 opacity-40 rounded-full filter blur-3xl animate-blob z-0" />
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-200 opacity-40 rounded-full filter blur-3xl animate-blob animation-delay-2000 z-0" />
-      <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-yellow-100 opacity-30 rounded-full filter blur-2xl animate-blob animation-delay-4000 z-0" />
+      <div className="animate-blob absolute -top-32 -left-32 z-0 h-96 w-96 rounded-full bg-pink-200 opacity-40 blur-3xl filter" />
+      <div className="animate-blob animation-delay-2000 absolute -right-32 -bottom-32 z-0 h-96 w-96 rounded-full bg-blue-200 opacity-40 blur-3xl filter" />
+      <div className="animate-blob animation-delay-4000 absolute top-1/2 left-1/2 z-0 h-72 w-72 rounded-full bg-yellow-100 opacity-30 blur-2xl filter" />
       <div className="relative z-10 w-full max-w-md">
-        <div className="flex flex-col items-center mb-6">
+        <div className="mb-6 flex flex-col items-center">
           {/* Stationery SVG Illustration (placeholder) */}
           <svg width="64" height="64" viewBox="0 0 64 64" fill="none" className="mb-2">
-            <rect x="8" y="8" width="48" height="48" rx="12" fill="#3B82F6"/>
-            <rect x="20" y="20" width="24" height="24" rx="6" fill="#FBBF24"/>
-            <rect x="28" y="28" width="8" height="16" rx="4" fill="#F472B6"/>
+            <rect x="8" y="8" width="48" height="48" rx="12" fill="#3B82F6" />
+            <rect x="20" y="20" width="24" height="24" rx="6" fill="#FBBF24" />
+            <rect x="28" y="28" width="8" height="16" rx="4" fill="#F472B6" />
           </svg>
-          <span className="text-2xl font-extrabold text-gray-900 tracking-tight">Swift Stationery</span>
+          <span className="text-2xl font-extrabold tracking-tight text-gray-900">
+            Swift Stationery
+          </span>
         </div>
-        <div className="bg-white/70 backdrop-blur-lg rounded-3xl shadow-2xl px-8 py-10">
-          <h2 className="text-center text-3xl font-extrabold text-gray-900 mb-2">Create your vendor account</h2>
-          <p className="text-center text-sm text-gray-600 mb-6">
+        <div className="rounded-3xl bg-white/70 px-8 py-10 shadow-2xl backdrop-blur-lg">
+          <h2 className="mb-2 text-center text-3xl font-extrabold text-gray-900">
+            Create your vendor account
+          </h2>
+          <p className="mb-6 text-center text-sm text-gray-600">
             Or{' '}
-            <Link href="/login" className="font-semibold text-blue-600 hover:underline transition-all duration-200">
+            <Link
+              href="/login"
+              className="font-semibold text-blue-600 transition-all duration-200 hover:underline"
+            >
               sign in to your existing account
             </Link>
           </p>
@@ -104,13 +112,18 @@ export default function VendorSignUpPage() {
                 type="text"
                 value={shopName}
                 onChange={(e) => setShopName(e.target.value)}
-                className={`peer block w-full px-4 pt-6 pb-2 text-gray-900 bg-transparent border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all placeholder-transparent ${errors.shopName ? 'border-red-400' : ''}`}
+                className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.shopName ? 'border-red-400' : ''}`}
                 placeholder="Shop Name"
               />
-              <label htmlFor="shopName" className="absolute left-4 top-2 text-gray-500 text-sm transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm pointer-events-none">
+              <label
+                htmlFor="shopName"
+                className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
+              >
                 Shop Name <span className="text-red-500">*</span>
               </label>
-              {errors.shopName && <div className="text-red-500 text-xs mt-1 animate-fade-in">{errors.shopName}</div>}
+              {errors.shopName && (
+                <div className="animate-fade-in mt-1 text-xs text-red-500">{errors.shopName}</div>
+              )}
             </div>
             {/* Email Field */}
             <div className="relative">
@@ -119,13 +132,18 @@ export default function VendorSignUpPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className={`peer block w-full px-4 pt-6 pb-2 text-gray-900 bg-transparent border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all placeholder-transparent ${errors.email ? 'border-red-400' : ''}`}
+                className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.email ? 'border-red-400' : ''}`}
                 placeholder="Email address"
               />
-              <label htmlFor="email" className="absolute left-4 top-2 text-gray-500 text-sm transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm pointer-events-none">
+              <label
+                htmlFor="email"
+                className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
+              >
                 Email address <span className="text-red-500">*</span>
               </label>
-              {errors.email && <div className="text-red-500 text-xs mt-1 animate-fade-in">{errors.email}</div>}
+              {errors.email && (
+                <div className="animate-fade-in mt-1 text-xs text-red-500">{errors.email}</div>
+              )}
             </div>
             {/* Password Field */}
             <div className="relative">
@@ -134,22 +152,31 @@ export default function VendorSignUpPage() {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className={`peer block w-full px-4 pt-6 pb-2 text-gray-900 bg-transparent border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all placeholder-transparent ${errors.password ? 'border-red-400' : ''}`}
+                className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.password ? 'border-red-400' : ''}`}
                 placeholder="Password"
               />
-              <label htmlFor="password" className="absolute left-4 top-2 text-gray-500 text-sm transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm pointer-events-none">
+              <label
+                htmlFor="password"
+                className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
+              >
                 Password <span className="text-red-500">*</span>
               </label>
               <button
                 type="button"
                 tabIndex={-1}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 focus:outline-none"
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 hover:text-blue-500 focus:outline-none"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
-                {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                {showPassword ? (
+                  <EyeSlashIcon className="h-5 w-5" />
+                ) : (
+                  <EyeIcon className="h-5 w-5" />
+                )}
               </button>
-              {errors.password && <div className="text-red-500 text-xs mt-1 animate-fade-in">{errors.password}</div>}
+              {errors.password && (
+                <div className="animate-fade-in mt-1 text-xs text-red-500">{errors.password}</div>
+              )}
             </div>
             {/* Confirm Password Field */}
             <div className="relative">
@@ -158,48 +185,64 @@ export default function VendorSignUpPage() {
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className={`peer block w-full px-4 pt-6 pb-2 text-gray-900 bg-transparent border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all placeholder-transparent ${errors.confirmPassword ? 'border-red-400' : ''}`}
+                className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.confirmPassword ? 'border-red-400' : ''}`}
                 placeholder="Confirm Password"
               />
-              <label htmlFor="confirmPassword" className="absolute left-4 top-2 text-gray-500 text-sm transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm pointer-events-none">
+              <label
+                htmlFor="confirmPassword"
+                className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
+              >
                 Confirm Password <span className="text-red-500">*</span>
               </label>
               <button
                 type="button"
                 tabIndex={-1}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 focus:outline-none"
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 hover:text-blue-500 focus:outline-none"
                 onClick={() => setShowConfirmPassword((v) => !v)}
                 aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
               >
-                {showConfirmPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                {showConfirmPassword ? (
+                  <EyeSlashIcon className="h-5 w-5" />
+                ) : (
+                  <EyeIcon className="h-5 w-5" />
+                )}
               </button>
-              {errors.confirmPassword && <div className="text-red-500 text-xs mt-1 animate-fade-in">{errors.confirmPassword}</div>}
+              {errors.confirmPassword && (
+                <div className="animate-fade-in mt-1 text-xs text-red-500">
+                  {errors.confirmPassword}
+                </div>
+              )}
             </div>
             {/* Phone Field */}
             <div className="relative">
               <input
                 id="phone"
                 type="tel"
-                value={phone ? `+91${phone}` : ''}
-                onChange={e => {
-                  let val = e.target.value.replace(/^\+91/, '');
+                value={phone ? `+1${phone}` : ''}
+                onChange={(e) => {
+                  let val = e.target.value.replace(/^\+1/, '');
                   val = val.replace(/\D/g, '').slice(0, 10);
                   setPhone(val);
                 }}
-                className={`peer block w-full px-4 pt-6 pb-2 text-gray-900 bg-transparent border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all placeholder-transparent ${errors.phone ? 'border-red-400' : ''}`}
-                placeholder="+911012345678"
-                maxLength={13}
-                pattern="\+91\d{10}"
+                className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.phone ? 'border-red-400' : ''}`}
+                placeholder="+11234567890"
+                maxLength={12}
+                pattern="\+1\d{10}"
               />
-              <label htmlFor="phone" className="absolute left-4 top-2 text-gray-500 text-sm transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm pointer-events-none">
+              <label
+                htmlFor="phone"
+                className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
+              >
                 Phone Number <span className="text-red-500">*</span>
               </label>
-              {errors.phone && <div className="text-red-500 text-xs mt-1 animate-fade-in">{errors.phone}</div>}
+              {errors.phone && (
+                <div className="animate-fade-in mt-1 text-xs text-red-500">{errors.phone}</div>
+              )}
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 rounded-xl text-white font-bold text-lg bg-gradient-to-r from-blue-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:scale-95"
+              className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-pink-500 px-4 py-3 text-lg font-bold text-white shadow-lg transition-all duration-200 hover:from-blue-600 hover:to-pink-600 focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:outline-none active:scale-95"
             >
               {loading ? 'Creating account...' : 'Create vendor account'}
             </button>
@@ -209,16 +252,38 @@ export default function VendorSignUpPage() {
       {/* Animate.css keyframes for blobs */}
       <style jsx global>{`
         @keyframes blob {
-          0%, 100% { transform: scale(1) translate(0, 0); }
-          33% { transform: scale(1.1, 0.9) translate(30px, -20px); }
-          66% { transform: scale(0.9, 1.1) translate(-20px, 30px); }
+          0%,
+          100% {
+            transform: scale(1) translate(0, 0);
+          }
+          33% {
+            transform: scale(1.1, 0.9) translate(30px, -20px);
+          }
+          66% {
+            transform: scale(0.9, 1.1) translate(-20px, 30px);
+          }
         }
-        .animate-blob { animation: blob 8s infinite ease-in-out; }
-        .animation-delay-2000 { animation-delay: 2s; }
-        .animation-delay-4000 { animation-delay: 4s; }
-        .animate-fade-in { animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-blob {
+          animation: blob 8s infinite ease-in-out;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
       `}</style>
     </div>
   );
-} 
+}

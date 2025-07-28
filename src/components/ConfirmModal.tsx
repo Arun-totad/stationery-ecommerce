@@ -21,38 +21,68 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 }) => {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 transition-opacity animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full flex flex-col items-center animate-fade-in-up">
-        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 mb-4">
-          <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+    <div className="bg-opacity-40 animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-black transition-opacity">
+      <div className="animate-fade-in-up flex w-full max-w-sm flex-col items-center rounded-2xl bg-white p-8 shadow-2xl">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100">
+          <svg
+            className="h-8 w-8 text-yellow-500"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 9v2m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"
+            />
           </svg>
         </div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">{title}</h3>
-        <p className="text-gray-700 mb-6 text-center">{message}</p>
-        <div className="flex gap-4 w-full">
+        <h3 className="mb-2 text-center text-xl font-bold text-gray-900">{title}</h3>
+        <p className="mb-6 text-center text-gray-700">{message}</p>
+        <div className="flex w-full gap-4">
           <button
             onClick={onCancel}
-            className="flex-1 px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition"
+            className="flex-1 rounded-lg bg-gray-100 px-4 py-2 font-semibold text-gray-700 transition hover:bg-gray-200"
           >
             {cancelText}
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 px-4 py-2 rounded-lg bg-green-500 text-white font-semibold hover:bg-green-600 transition shadow"
+            className="flex-1 rounded-lg bg-green-500 px-4 py-2 font-semibold text-white shadow transition hover:bg-green-600"
           >
             {confirmText}
           </button>
         </div>
       </div>
       <style jsx global>{`
-        .animate-fade-in { animation: fadeIn 0.2s; }
-        .animate-fade-in-up { animation: fadeInUp 0.25s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in {
+          animation: fadeIn 0.2s;
+        }
+        .animate-fade-in-up {
+          animation: fadeInUp 0.25s;
+        }
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
       `}</style>
     </div>
   );
 };
 
-export default ConfirmModal; 
+export default ConfirmModal;

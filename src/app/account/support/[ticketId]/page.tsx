@@ -82,7 +82,6 @@ export default function AccountSupportTicketDetailPage() {
             router.push('/account/support');
             return;
           }
-
         } else {
           toast.error('Ticket not found.');
           router.push('/account/support');
@@ -123,7 +122,12 @@ export default function AccountSupportTicketDetailPage() {
       setTicket((prevTicket) => {
         if (!prevTicket) return null;
         const updatedMessages = [...prevTicket.messages, message];
-        return { ...prevTicket, messages: updatedMessages, updatedAt: message.timestamp, status: ticket.status === 'resolved' ? 'in-progress' : ticket.status };
+        return {
+          ...prevTicket,
+          messages: updatedMessages,
+          updatedAt: message.timestamp,
+          status: ticket.status === 'resolved' ? 'in-progress' : ticket.status,
+        };
       });
       setNewMessage('');
       toast.success('Message sent!');
@@ -160,7 +164,12 @@ export default function AccountSupportTicketDetailPage() {
       setTicket((prevTicket) => {
         if (!prevTicket) return null;
         const updatedMessages = [...prevTicket.messages, message];
-        return { ...prevTicket, messages: updatedMessages, updatedAt: message.timestamp, status: 'in-progress' };
+        return {
+          ...prevTicket,
+          messages: updatedMessages,
+          updatedAt: message.timestamp,
+          status: 'in-progress',
+        };
       });
       setReopenMessage('');
       setShowReopenInput(false);
@@ -225,7 +234,12 @@ export default function AccountSupportTicketDetailPage() {
           });
         }
 
-        return { ...prevTicket, status: newStatus, messages: updatedMessages, updatedAt: Timestamp.now().toDate() };
+        return {
+          ...prevTicket,
+          status: newStatus,
+          messages: updatedMessages,
+          updatedAt: Timestamp.now().toDate(),
+        };
       });
       toast.success('Ticket closed successfully!');
     } catch (error) {
@@ -250,7 +264,7 @@ export default function AccountSupportTicketDetailPage() {
 
   if (loadingTicket || authLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex min-h-screen items-center justify-center">
         <p>Loading ticket details...</p>
       </div>
     );
@@ -259,8 +273,10 @@ export default function AccountSupportTicketDetailPage() {
   if (!ticket || (user && user.uid !== ticket.userId)) {
     // Redirect is handled in useEffect, but this provides a fallback UI
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <p className="text-red-600">You are not authorized to view this ticket or it does not exist.</p>
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-red-600">
+          You are not authorized to view this ticket or it does not exist.
+        </p>
       </div>
     );
   }
@@ -268,107 +284,147 @@ export default function AccountSupportTicketDetailPage() {
   const isCustomer = user && user.uid === ticket.userId;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-white py-10 px-4 sm:px-6 lg:px-8 animate-fade-in-up">
-      <div className="max-w-4xl mx-auto bg-white p-8 rounded-3xl shadow-2xl border-2 border-transparent animate-fade-in-up" style={{ borderImage: 'linear-gradient(90deg, #3B82F6 0%, #F472B6 100%) 1' }}>
-        <div className="flex justify-between items-center mb-6">
+    <div className="animate-fade-in-up min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-white px-4 py-10 sm:px-6 lg:px-8">
+      <div
+        className="animate-fade-in-up mx-auto max-w-4xl rounded-3xl border-2 border-transparent bg-white p-8 shadow-2xl"
+        style={{ borderImage: 'linear-gradient(90deg, #3B82F6 0%, #F472B6 100%) 1' }}
+      >
+        <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <svg className="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" /></svg>
-            <h1 className="text-3xl font-extrabold bg-gradient-to-r from-blue-500 to-pink-400 bg-clip-text text-transparent">Support Ticket: {ticket.subject}</h1>
+            <svg
+              className="h-7 w-7 text-blue-500"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 4v16m8-8H4" />
+            </svg>
+            <h1 className="bg-gradient-to-r from-blue-500 to-pink-400 bg-clip-text text-3xl font-extrabold text-transparent">
+              Support Ticket: {ticket.subject}
+            </h1>
           </div>
           <button
             onClick={() => router.push('/account/support')}
-            className="inline-flex items-center px-4 py-2 border border-blue-200 rounded-xl shadow-sm text-sm font-semibold text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition-all"
+            className="inline-flex items-center rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm transition-all hover:bg-blue-50 focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:outline-none"
           >
             Back to Support Tickets
           </button>
         </div>
-        <hr className="mb-6 border-0 h-1 bg-gradient-to-r from-blue-400 via-pink-300 to-blue-400 rounded-full" />
+        <hr className="mb-6 h-1 rounded-full border-0 bg-gradient-to-r from-blue-400 via-pink-300 to-blue-400" />
         <div className="mb-6">
-          <p className="text-sm text-gray-600">Ticket ID: <span className="font-mono text-blue-700">{ticket.id}</span></p>
+          <p className="text-sm text-gray-600">
+            Ticket ID: <span className="font-mono text-blue-700">{ticket.id}</span>
+          </p>
           {ticket.orderId && (
             <p className="text-sm text-gray-600">
-              Order Number: <Link href={`/account/orders/${ticket.orderId}`} className="text-blue-600 font-mono font-bold hover:underline">{orderNumber || ticket.orderId}</Link>
+              Order Number:{' '}
+              <Link
+                href={`/account/orders/${ticket.orderId}`}
+                className="font-mono font-bold text-blue-600 hover:underline"
+              >
+                {orderNumber || ticket.orderId}
+              </Link>
             </p>
           )}
-          <p className="text-sm text-gray-600">Status:
+          <p className="text-sm text-gray-600">
+            Status:
             <span
-              className={`ml-1 px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full shadow-sm transition-all duration-200
-                ${ticket.status === 'open'
+              className={`ml-1 inline-flex rounded-full px-3 py-1 text-xs leading-5 font-bold shadow-sm transition-all duration-200 ${
+                ticket.status === 'open'
                   ? 'bg-green-100 text-green-700 shadow-green-200'
                   : ticket.status === 'in-progress'
-                  ? 'bg-yellow-100 text-yellow-700 shadow-yellow-200'
-                  : ticket.status === 'resolved'
-                  ? 'bg-blue-100 text-blue-700 shadow-blue-200'
-                  : 'bg-red-100 text-red-700 shadow-red-200'}
-              `}
+                    ? 'bg-yellow-100 text-yellow-700 shadow-yellow-200'
+                    : ticket.status === 'resolved'
+                      ? 'bg-blue-100 text-blue-700 shadow-blue-200'
+                      : 'bg-red-100 text-red-700 shadow-red-200'
+              } `}
             >
               {ticket.status}
             </span>
           </p>
-          <p className="text-sm text-gray-600">Created At: <span className="font-mono">{ticket.createdAt ? formatDateTimeDDMMYYYY(ticket.createdAt) : 'N/A'}</span></p>
-          <p className="text-sm text-gray-600">Last Updated: <span className="font-mono">{ticket.updatedAt ? formatDateTimeDDMMYYYY(ticket.updatedAt) : 'N/A'}</span></p>
+          <p className="text-sm text-gray-600">
+            Created At:{' '}
+            <span className="font-mono">
+              {ticket.createdAt ? formatDateTimeDDMMYYYY(ticket.createdAt) : 'N/A'}
+            </span>
+          </p>
+          <p className="text-sm text-gray-600">
+            Last Updated:{' '}
+            <span className="font-mono">
+              {ticket.updatedAt ? formatDateTimeDDMMYYYY(ticket.updatedAt) : 'N/A'}
+            </span>
+          </p>
         </div>
         {/* Initial Message */}
-        <div className="mb-6 p-4 border-2 border-blue-100 rounded-xl bg-gradient-to-br from-blue-50 to-pink-50 animate-fade-in-up">
-          <p className="text-sm font-bold mb-2 text-blue-700">Initial Query:</p>
+        <div className="animate-fade-in-up mb-6 rounded-xl border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-pink-50 p-4">
+          <p className="mb-2 text-sm font-bold text-blue-700">Initial Query:</p>
           <p className="text-gray-900">{ticket.message}</p>
         </div>
         {/* Chat History */}
-        <div className="space-y-4 mb-6 max-h-96 overflow-y-auto p-4 border-2 border-blue-100 rounded-xl bg-blue-50 animate-fade-in-up">
+        <div className="animate-fade-in-up mb-6 max-h-96 space-y-4 overflow-y-auto rounded-xl border-2 border-blue-100 bg-blue-50 p-4">
           {ticket.messages.length > 0 ? (
             ticket.messages.map((msg, index) => {
-              const isSystemMessage = msg.messageText.startsWith('Ticket closed') || msg.messageText.startsWith('Ticket reopened');
+              const isSystemMessage =
+                msg.messageText.startsWith('Ticket closed') ||
+                msg.messageText.startsWith('Ticket reopened');
               return (
                 <div
                   key={index}
                   className={`flex ${isSystemMessage ? 'justify-center' : msg.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`p-3 rounded-2xl max-w-xs sm:max-w-md lg:max-w-lg shadow transition-all duration-200
-                      ${msg.messageText.startsWith('Ticket closed')
-                        ? 'bg-red-100 text-red-800 text-center w-full max-w-none border-2 border-red-200'
+                    className={`max-w-xs rounded-2xl p-3 shadow transition-all duration-200 sm:max-w-md lg:max-w-lg ${
+                      msg.messageText.startsWith('Ticket closed')
+                        ? 'w-full max-w-none border-2 border-red-200 bg-red-100 text-center text-red-800'
                         : msg.messageText.startsWith('Ticket reopened')
-                        ? 'bg-green-100 text-green-800 text-center w-full max-w-none border-2 border-green-200'
-                        : msg.senderId === user?.uid
-                        ? 'bg-gradient-to-br from-blue-100 to-pink-100 text-gray-900 border-2 border-blue-200 hover:scale-105 hover:shadow-lg'
-                        : 'bg-white text-gray-900 border-2 border-gray-200 hover:scale-105 hover:shadow-lg'
+                          ? 'w-full max-w-none border-2 border-green-200 bg-green-100 text-center text-green-800'
+                          : msg.senderId === user?.uid
+                            ? 'border-2 border-blue-200 bg-gradient-to-br from-blue-100 to-pink-100 text-gray-900 hover:scale-105 hover:shadow-lg'
+                            : 'border-2 border-gray-200 bg-white text-gray-900 hover:scale-105 hover:shadow-lg'
                     } ${isSystemMessage ? 'border-none' : ''}`}
                   >
-                    <p className="text-xs font-semibold mb-1 text-gray-500">{getSenderName(msg.senderId, msg.senderRole)} at {formatDateTimeDDMMYYYY(msg.timestamp)}</p>
+                    <p className="mb-1 text-xs font-semibold text-gray-500">
+                      {getSenderName(msg.senderId, msg.senderRole)} at{' '}
+                      {formatDateTimeDDMMYYYY(msg.timestamp)}
+                    </p>
                     <p>{msg.messageText}</p>
                   </div>
                 </div>
-              );})
+              );
+            })
           ) : (
-            <p className="text-gray-600 text-center">No chat history for this ticket yet.</p>
+            <p className="text-center text-gray-600">No chat history for this ticket yet.</p>
           )}
         </div>
         {/* Message Input and Status Actions */}
-        <div className="border-t border-blue-100 pt-6 mt-6 animate-fade-in-up">
-          <h2 className="text-xl font-bold text-blue-700 mb-4">Respond to Ticket</h2>
-          
+        <div className="animate-fade-in-up mt-6 border-t border-blue-100 pt-6">
+          <h2 className="mb-4 text-xl font-bold text-blue-700">Respond to Ticket</h2>
+
           {(ticket.status === 'resolved' || ticket.status === 'closed') && isCustomer && (
             <div className="mb-4">
               <button
                 onClick={() => setShowReopenInput(!showReopenInput)}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+                className="inline-flex items-center rounded-md border border-transparent bg-yellow-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-yellow-700 focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:outline-none"
               >
                 {showReopenInput ? 'Cancel Reopen' : 'Reopen Ticket'}
               </button>
               {showReopenInput && (
                 <div className="mt-4">
-                  <label htmlFor="reopen-message" className="sr-only">Message to reopen</label>
+                  <label htmlFor="reopen-message" className="sr-only">
+                    Message to reopen
+                  </label>
                   <textarea
                     id="reopen-message"
                     rows={3}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-2 text-gray-900"
+                    className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     placeholder="Please explain why you are reopening this ticket..."
                     value={reopenMessage}
                     onChange={(e) => setReopenMessage(e.target.value)}
                   ></textarea>
                   <button
                     onClick={handleReopenTicket}
-                    className="mt-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    className="mt-2 inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
                     disabled={isSubmitting || !reopenMessage.trim()}
                   >
                     {isSubmitting ? 'Reopening...' : 'Submit Reopen Request'}
@@ -383,25 +439,27 @@ export default function AccountSupportTicketDetailPage() {
             <div className="mb-4">
               <button
                 onClick={() => setShowCloseInput(!showCloseInput)}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                className="inline-flex items-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
                 disabled={isSubmitting}
               >
                 {showCloseInput ? 'Cancel Close' : 'Close Ticket'}
               </button>
               {showCloseInput && (
                 <div className="mt-4">
-                  <label htmlFor="close-message" className="sr-only">Message to close</label>
+                  <label htmlFor="close-message" className="sr-only">
+                    Message to close
+                  </label>
                   <textarea
                     id="close-message"
                     rows={3}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-2 text-gray-900"
+                    className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     placeholder="Optional: Add a comment before closing..."
                     value={closeComment}
                     onChange={(e) => setCloseComment(e.target.value)}
                   ></textarea>
                   <button
                     onClick={() => handleCloseTicket(closeComment)}
-                    className="mt-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                    className="mt-2 inline-flex items-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? 'Closing...' : 'Confirm Close'}
@@ -417,11 +475,13 @@ export default function AccountSupportTicketDetailPage() {
                 <UserIcon className="h-8 w-8 text-gray-400" />
               </div>
               <div className="min-w-0 flex-1">
-                <label htmlFor="comment" className="sr-only">Add your message</label>
+                <label htmlFor="comment" className="sr-only">
+                  Add your message
+                </label>
                 <textarea
                   id="comment"
                   rows={3}
-                  className="shadow-sm focus:ring-blue-500 focus:border-blue-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-2 text-gray-900"
+                  className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   placeholder="Add your message..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
@@ -429,7 +489,7 @@ export default function AccountSupportTicketDetailPage() {
                 <div className="mt-3 flex items-center justify-between">
                   <button
                     type="button"
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    className="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
                     onClick={handleSendMessage}
                     disabled={isSubmitting || !newMessage.trim()}
                   >
@@ -443,4 +503,4 @@ export default function AccountSupportTicketDetailPage() {
       </div>
     </div>
   );
-} 
+}

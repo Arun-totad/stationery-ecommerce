@@ -4,7 +4,15 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, writeBatch, doc, arrayRemove } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  writeBatch,
+  doc,
+  arrayRemove,
+} from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import { Product } from '@/types';
 
@@ -44,9 +52,9 @@ export default function BulkProductOperations({
           // Delete selected products and update vendor's products array
           const vendorRef = doc(db, 'users', user.uid);
           batch.update(vendorRef, {
-            products: arrayRemove(...selectedProducts)
+            products: arrayRemove(...selectedProducts),
           });
-          
+
           for (const productId of selectedProducts) {
             const productRef = doc(db, 'products', productId);
             batch.delete(productRef);
@@ -68,7 +76,9 @@ export default function BulkProductOperations({
           // Update prices for selected products
           for (const productId of selectedProducts) {
             const productRef = doc(db, 'products', productId);
-            const productDoc = await getDocs(query(collection(db, 'products'), where('id', '==', productId)));
+            const productDoc = await getDocs(
+              query(collection(db, 'products'), where('id', '==', productId))
+            );
             const currentPrice = productDoc.docs[0]?.data().price || 0;
 
             let newPrice = currentPrice;
@@ -100,7 +110,9 @@ export default function BulkProductOperations({
           // Update stock for selected products
           for (const productId of selectedProducts) {
             const productRef = doc(db, 'products', productId);
-            const productDoc = await getDocs(query(collection(db, 'products'), where('id', '==', productId)));
+            const productDoc = await getDocs(
+              query(collection(db, 'products'), where('id', '==', productId))
+            );
             const currentStock = productDoc.docs[0]?.data().stock || 0;
 
             let newStock = currentStock;
@@ -139,7 +151,7 @@ export default function BulkProductOperations({
   return (
     <div className="bg-white shadow sm:rounded-lg">
       <div className="px-4 py-5 sm:p-6">
-        <h3 className="text-lg font-medium leading-6 text-gray-900">
+        <h3 className="text-lg leading-6 font-medium text-gray-900">
           Bulk Operations ({selectedProducts.length} products selected)
         </h3>
         <div className="mt-4 space-y-4">
@@ -192,16 +204,18 @@ export default function BulkProductOperations({
                 <label htmlFor="priceValue" className="block text-sm font-medium text-gray-700">
                   {priceUpdate.type === 'percentage' ? 'Percentage Change' : 'Amount Change'}
                 </label>
-                <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="relative mt-1 rounded-md shadow-sm">
                   <input
                     type="number"
                     id="priceValue"
                     value={priceUpdate.value}
                     onChange={(e) => setPriceUpdate({ ...priceUpdate, value: e.target.value })}
                     className="block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                    placeholder={priceUpdate.type === 'percentage' ? 'Enter percentage' : 'Enter amount'}
+                    placeholder={
+                      priceUpdate.type === 'percentage' ? 'Enter percentage' : 'Enter amount'
+                    }
                   />
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
                     <span className="text-gray-500 sm:text-sm">
                       {priceUpdate.type === 'percentage' ? '%' : '₹'}
                     </span>
@@ -275,7 +289,7 @@ export default function BulkProductOperations({
                 setStockUpdate({ type: 'add', value: '' });
                 setOperationType('updateStatus');
               }}
-              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
             >
               Reset
             </button>
@@ -283,7 +297,7 @@ export default function BulkProductOperations({
               type="button"
               onClick={handleBulkOperation}
               disabled={loading || selectedProducts.length === 0}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
             >
               {loading ? 'Processing...' : 'Apply Changes'}
             </button>
@@ -292,4 +306,4 @@ export default function BulkProductOperations({
       </div>
     </div>
   );
-} 
+}

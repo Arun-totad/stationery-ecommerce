@@ -65,7 +65,7 @@ export default function AccountSupportPage() {
 
   if (authLoading || loadingTickets) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex min-h-screen items-center justify-center">
         <p>Loading support tickets...</p>
       </div>
     );
@@ -73,75 +73,88 @@ export default function AccountSupportPage() {
 
   if (!user) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex min-h-screen items-center justify-center">
         <p>Please log in to view your support tickets.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-white py-12 px-4 sm:px-6 lg:px-8 animate-fade-in-up">
-      <div className="max-w-4xl mx-auto bg-white p-8 rounded-3xl shadow-2xl border-2 border-transparent animate-fade-in-up" style={{ borderImage: 'linear-gradient(90deg, #3B82F6 0%, #F472B6 100%) 1' }}>
-        <div className="flex justify-between items-center mb-6">
+    <div className="animate-fade-in-up min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-white px-4 py-12 sm:px-6 lg:px-8">
+      <div
+        className="animate-fade-in-up mx-auto max-w-4xl rounded-3xl border-2 border-transparent bg-white p-8 shadow-2xl"
+        style={{ borderImage: 'linear-gradient(90deg, #3B82F6 0%, #F472B6 100%) 1' }}
+      >
+        <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <svg className="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" /></svg>
-            <h1 className="text-3xl font-extrabold bg-gradient-to-r from-blue-500 to-pink-400 bg-clip-text text-transparent">My Support Tickets</h1>
+            <svg
+              className="h-7 w-7 text-blue-500"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 4v16m8-8H4" />
+            </svg>
+            <h1 className="bg-gradient-to-r from-blue-500 to-pink-400 bg-clip-text text-3xl font-extrabold text-transparent">
+              My Support Tickets
+            </h1>
           </div>
         </div>
-        <hr className="mb-6 border-0 h-1 bg-gradient-to-r from-blue-400 via-pink-300 to-blue-400 rounded-full" />
+        <hr className="mb-6 h-1 rounded-full border-0 bg-gradient-to-r from-blue-400 via-pink-300 to-blue-400" />
         {tickets.length === 0 ? (
-          <p className="text-gray-600 text-center">You have no support tickets yet.</p>
+          <p className="text-center text-gray-600">You have no support tickets yet.</p>
         ) : (
-          <div className="overflow-x-auto animate-fade-in-up">
+          <div className="animate-fade-in-up overflow-x-auto">
             <table className="min-w-full divide-y divide-blue-100">
               <thead className="bg-blue-50">
                 <tr>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-bold tracking-wider text-blue-700 uppercase"
                   >
                     Subject
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-bold tracking-wider text-blue-700 uppercase"
                   >
                     Status
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-bold tracking-wider text-blue-700 uppercase"
                   >
                     Last Updated
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-blue-100">
+              <tbody className="divide-y divide-blue-100 bg-white">
                 {tickets.map((ticket) => (
                   <tr
                     key={ticket.id}
-                    className="cursor-pointer hover:bg-gradient-to-r hover:from-blue-50 hover:to-pink-50 transition-all duration-200 animate-fade-in-up"
+                    className="animate-fade-in-up cursor-pointer transition-all duration-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-pink-50"
                     onClick={() => router.push(`/account/support/${ticket.id}`)}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-base font-semibold text-gray-900">
+                    <td className="px-6 py-4 text-base font-semibold whitespace-nowrap text-gray-900">
                       {ticket.subject}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full shadow-sm transition-all duration-200
-                          ${ticket.status === 'open'
+                        className={`inline-flex rounded-full px-3 py-1 text-xs leading-5 font-bold shadow-sm transition-all duration-200 ${
+                          ticket.status === 'open'
                             ? 'bg-green-100 text-green-700 shadow-green-200'
                             : ticket.status === 'in-progress'
-                            ? 'bg-yellow-100 text-yellow-700 shadow-yellow-200'
-                            : ticket.status === 'resolved'
-                            ? 'bg-blue-100 text-blue-700 shadow-blue-200'
-                            : 'bg-red-100 text-red-700 shadow-red-200'}
-                        `}
+                              ? 'bg-yellow-100 text-yellow-700 shadow-yellow-200'
+                              : ticket.status === 'resolved'
+                                ? 'bg-blue-100 text-blue-700 shadow-blue-200'
+                                : 'bg-red-100 text-red-700 shadow-red-200'
+                        } `}
                       >
                         {ticket.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
                       {ticket.updatedAt ? formatDateDDMMYYYY(ticket.updatedAt) : 'N/A'}
                     </td>
                   </tr>
@@ -153,4 +166,4 @@ export default function AccountSupportPage() {
       </div>
     </div>
   );
-} 
+}

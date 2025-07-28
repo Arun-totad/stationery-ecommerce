@@ -8,8 +8,21 @@ import { toast } from 'react-hot-toast';
 import { MinusSmallIcon, PlusSmallIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { FaBoxOpen, FaRupeeSign, FaShippingFast, FaReceipt, FaTrash, FaShoppingCart, FaArrowRight } from 'react-icons/fa';
-import { calculateDeliveryFee, FREE_SHIPPING_THRESHOLD, calculateServiceFee, DELIVERY_FEE } from '@/lib/fees';
+import {
+  FaBoxOpen,
+  FaDollarSign,
+  FaShippingFast,
+  FaReceipt,
+  FaTrash,
+  FaShoppingCart,
+  FaArrowRight,
+} from 'react-icons/fa';
+import {
+  calculateDeliveryFee,
+  FREE_SHIPPING_THRESHOLD,
+  calculateServiceFee,
+  DELIVERY_FEE,
+} from '@/lib/fees';
 
 export default function CartPage() {
   const { cartItems, loading, updateCartItemQuantity, removeFromCart, clearCart } = useCart();
@@ -51,7 +64,7 @@ export default function CartPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
+      <div className="flex min-h-screen items-center justify-center bg-gray-100">
         <p className="text-gray-700">Loading cart...</p>
       </div>
     );
@@ -60,30 +73,33 @@ export default function CartPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-10">
       <div className="container mx-auto px-4">
-        <h1 className="text-4xl font-extrabold text-gray-900 mb-10 text-center">
+        <h1 className="mb-10 text-center text-4xl font-extrabold text-gray-900">
           Your Shopping Cart
-          <span className="block h-1 w-1/2 mx-auto bg-gradient-to-r from-pink-400 via-blue-400 to-purple-400 rounded-full mt-2"></span>
+          <span className="mx-auto mt-2 block h-1 w-1/2 rounded-full bg-gradient-to-r from-pink-400 via-blue-400 to-purple-400"></span>
         </h1>
         {cartItems.length === 0 ? (
-          <div className="text-center text-gray-600 p-8 bg-white/80 backdrop-blur rounded-2xl shadow-xl">
-            <p className="text-lg mb-4">Your cart is empty.</p>
+          <div className="rounded-2xl bg-white/80 p-8 text-center text-gray-600 shadow-xl backdrop-blur">
+            <p className="mb-4 text-lg">Your cart is empty.</p>
             <Link href="/products">
-              <button className="bg-gradient-to-r from-blue-400 to-pink-400 text-white py-2 px-6 rounded-full font-semibold shadow hover:scale-105 transition-all">
-                <FaShoppingCart className="inline mr-2" /> Start Shopping
+              <button className="rounded-full bg-gradient-to-r from-blue-400 to-pink-400 px-6 py-2 font-semibold text-white shadow transition-all hover:scale-105">
+                <FaShoppingCart className="mr-2 inline" /> Start Shopping
               </button>
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
             {/* Cart Items Card */}
-            <div className="lg:col-span-2 bg-white/80 backdrop-blur rounded-2xl shadow-xl p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-8 flex items-center gap-2">
+            <div className="rounded-2xl bg-white/80 p-8 shadow-xl backdrop-blur lg:col-span-2">
+              <h2 className="mb-8 flex items-center gap-2 text-2xl font-bold text-gray-900">
                 <FaShoppingCart className="text-blue-400" /> Items in Cart
               </h2>
               <div className="divide-y divide-gray-200">
                 {cartItems.map((item) => (
-                  <div key={item.id} className="flex flex-col sm:flex-row items-center py-6 gap-4 w-full">
-                    <div className="flex-shrink-0 w-32 h-32 relative rounded-xl overflow-hidden border-2 border-blue-100 shadow bg-gradient-to-br from-gray-100 via-blue-50 to-purple-50 flex items-center justify-center">
+                  <div
+                    key={item.id}
+                    className="flex w-full flex-col items-center gap-4 py-6 sm:flex-row"
+                  >
+                    <div className="relative flex h-32 w-32 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-blue-100 bg-gradient-to-br from-gray-100 via-blue-50 to-purple-50 shadow">
                       {item.images && item.images.length > 0 ? (
                         <Image
                           src={item.images[0]}
@@ -94,33 +110,38 @@ export default function CartPage() {
                         />
                       ) : (
                         <span className="flex flex-col items-center text-gray-400">
-                          <FaBoxOpen className="text-3xl mb-2" />
+                          <FaBoxOpen className="mb-2 text-3xl" />
                           No Image
                         </span>
                       )}
                     </div>
-                    <div className="ml-0 sm:ml-4 flex-grow w-full">
-                      <h3 className="text-lg font-bold text-gray-900 truncate mb-1">
-                        <Link href={`/products/${item.id}`} className="hover:underline hover:text-blue-500 transition-colors">
+                    <div className="ml-0 w-full flex-grow sm:ml-4">
+                      <h3 className="mb-1 truncate text-lg font-bold text-gray-900">
+                        <Link
+                          href={`/products/${item.id}`}
+                          className="transition-colors hover:text-blue-500 hover:underline"
+                        >
                           {item.name}
                         </Link>
                       </h3>
-                      <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full justify-between sm:justify-start">
-                        <div className="flex flex-col items-center justify-center min-w-[100px] text-center mb-2 sm:mb-0">
-                          <span className="mb-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 text-white text-xs font-bold shadow">MRP</span>
-                          <span className="px-5 py-2 rounded-full bg-blue-50 text-indigo-700 font-bold text-lg border border-blue-200 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-400 cursor-pointer">
-                            ₹{item.price.toFixed(2)}
+                      <div className="flex w-full flex-col items-center justify-between gap-2 sm:flex-row sm:justify-start sm:gap-3">
+                        <div className="mb-2 flex min-w-[100px] flex-col items-center justify-center text-center sm:mb-0">
+                          <span className="mb-1 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 px-2 py-0.5 text-xs font-bold text-white shadow">
+                            MRP
+                          </span>
+                          <span className="cursor-pointer rounded-full border border-blue-200 bg-blue-50 px-5 py-2 text-lg font-bold text-indigo-700 shadow-sm transition-all duration-200 hover:border-blue-400 hover:shadow-md">
+                            ${item.price.toFixed(2)}
                           </span>
                         </div>
-                        <span className="text-gray-400 text-xl font-bold mb-2 sm:mb-0">×</span>
-                        <div className="flex flex-row items-center gap-2 mb-2 sm:mb-0">
+                        <span className="mb-2 text-xl font-bold text-gray-400 sm:mb-0">×</span>
+                        <div className="mb-2 flex flex-row items-center gap-2 sm:mb-0">
                           <button
                             onClick={() => {
                               updateCartItemQuantity(item.id, item.quantity - 1);
                               setLastChangedId(item.id);
                             }}
                             disabled={item.quantity <= 1}
-                            className="p-2 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed shadow"
+                            className="rounded-full bg-blue-100 p-2 text-blue-700 shadow hover:bg-blue-200 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             -
                           </button>
@@ -128,34 +149,36 @@ export default function CartPage() {
                             type="number"
                             min={1}
                             value={item.quantity}
-                            onChange={e => {
+                            onChange={(e) => {
                               const val = Math.max(1, parseInt(e.target.value) || 1);
                               updateCartItemQuantity(item.id, val);
                               setLastChangedId(item.id);
                             }}
-                            className="w-14 text-center text-gray-900 font-bold text-lg rounded-full border border-blue-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200"
+                            className="w-14 rounded-full border border-blue-200 bg-white text-center text-lg font-bold text-gray-900 shadow-sm transition-all duration-200 focus:ring-2 focus:ring-blue-400 focus:outline-none"
                           />
                           <button
                             onClick={() => {
                               updateCartItemQuantity(item.id, item.quantity + 1);
                               setLastChangedId(item.id);
                             }}
-                            className="p-2 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 shadow"
+                            className="rounded-full bg-blue-100 p-2 text-blue-700 shadow hover:bg-blue-200"
                           >
                             +
                           </button>
                         </div>
-                        <span className="text-gray-400 text-xl font-bold mb-2 sm:mb-0">=</span>
-                        <div className="w-full flex flex-col items-center sm:w-auto sm:flex-row sm:items-center gap-2 mt-2 sm:mt-0">
+                        <span className="mb-2 text-xl font-bold text-gray-400 sm:mb-0">=</span>
+                        <div className="mt-2 flex w-full flex-col items-center gap-2 sm:mt-0 sm:w-auto sm:flex-row sm:items-center">
                           <span
-                            ref={el => { subtotalRefs.current[item.id] = el; }}
-                            className={`px-5 py-2 rounded-full bg-blue-50 text-indigo-700 font-extrabold text-xl border border-blue-200 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-400 cursor-pointer ${lastChangedId === item.id ? 'animate-scale' : ''}`}
+                            ref={(el) => {
+                              subtotalRefs.current[item.id] = el;
+                            }}
+                            className={`cursor-pointer rounded-full border border-blue-200 bg-blue-50 px-5 py-2 text-xl font-extrabold text-indigo-700 shadow-sm transition-all duration-200 hover:border-blue-400 hover:shadow-md ${lastChangedId === item.id ? 'animate-scale' : ''}`}
                           >
-                            ₹{(item.price * item.quantity).toFixed(2)}
+                            ${(item.price * item.quantity).toFixed(2)}
                           </span>
                           <button
                             onClick={() => removeFromCart(item.id)}
-                            className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 shadow transition-all"
+                            className="rounded-full bg-red-100 p-2 text-red-600 shadow transition-all hover:bg-red-200"
                             title="Remove"
                           >
                             <FaTrash className="h-5 w-5" />
@@ -167,68 +190,89 @@ export default function CartPage() {
                 ))}
               </div>
               {/* Subtotal at the right end of cart items card */}
-              <div className="flex justify-end mt-6">
-                <div className="text-xl font-bold text-gray-900 bg-gradient-to-r from-blue-100 to-pink-100 px-6 py-3 rounded-full shadow">
-                  Subtotal: <span className="text-indigo-600">₹{subtotal.toFixed(2)}</span>
+              <div className="mt-6 flex justify-end">
+                <div className="rounded-full bg-gradient-to-r from-blue-100 to-pink-100 px-6 py-3 text-xl font-bold text-gray-900 shadow">
+                  Subtotal: <span className="text-indigo-600">${subtotal.toFixed(2)}</span>
                 </div>
               </div>
               <div className="mt-8 flex justify-end">
                 <button
                   onClick={clearCart}
-                  className="px-5 py-2 bg-gradient-to-r from-blue-400 to-pink-400 text-white rounded-full font-semibold shadow hover:scale-105 transition-all"
+                  className="rounded-full bg-gradient-to-r from-blue-400 to-pink-400 px-5 py-2 font-semibold text-white shadow transition-all hover:scale-105"
                 >
-                  <FaTrash className="inline mr-2" /> Clear Cart
+                  <FaTrash className="mr-2 inline" /> Clear Cart
                 </button>
               </div>
             </div>
             {/* Order Summary Card */}
-            <div className="lg:col-span-1 bg-white/80 backdrop-blur rounded-2xl shadow-xl p-8 h-fit">
-              <h2 className="text-2xl font-bold text-gray-900 mb-8 flex items-center gap-2">
+            <div className="h-fit rounded-2xl bg-white/80 p-8 shadow-xl backdrop-blur lg:col-span-1">
+              <h2 className="mb-8 flex items-center gap-2 text-2xl font-bold text-gray-900">
                 <FaReceipt className="text-purple-400" /> Order Summary
               </h2>
               <div className="space-y-5">
-                <div className="flex justify-between items-center text-gray-700">
-                  <span className="flex items-center gap-2"><FaRupeeSign className="text-blue-400" /> Subtotal</span>
-                  <span>₹{subtotal.toFixed(2)}</span>
+                <div className="flex items-center justify-between text-gray-700">
+                  <span className="flex items-center gap-2">
+                    <FaDollarSign className="text-blue-400" /> Subtotal
+                  </span>
+                  <span>${subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between items-center text-gray-700 font-semibold mt-2">
+                <div className="mt-2 flex items-center justify-between font-semibold text-gray-700">
                   <span className="flex items-center gap-2">
                     <FaShippingFast className="text-pink-400" /> Delivery Fee
                   </span>
                   <span className="flex flex-col items-end">
-                    <span className={subtotal >= freeShippingThreshold ? "text-green-600 font-extrabold text-xl" : "text-blue-600 font-bold text-lg"}>
-                      ₹{subtotal >= freeShippingThreshold ? "0.00" : shipping.toFixed(2)}
+                    <span
+                      className={
+                        subtotal >= freeShippingThreshold
+                          ? 'text-xl font-extrabold text-green-600'
+                          : 'text-lg font-bold text-blue-600'
+                      }
+                    >
+                      ${subtotal >= freeShippingThreshold ? '0.00' : shipping.toFixed(2)}
                     </span>
                     {subtotal >= freeShippingThreshold && (
-                      <span className="flex items-center gap-1 mt-0.5">
-                        <span className="px-3 py-1 rounded-full bg-gradient-to-r from-green-400 to-blue-400 text-white font-bold text-xs shadow border border-green-300 select-none" style={{letterSpacing: '2px'}}>FREE</span>
-                        <span className="text-red-600 font-bold text-sm">-₹{DELIVERY_FEE.toFixed(2)}</span>
+                      <span className="mt-0.5 flex items-center gap-1">
+                        <span
+                          className="rounded-full border border-green-300 bg-gradient-to-r from-green-400 to-blue-400 px-3 py-1 text-xs font-bold text-white shadow select-none"
+                          style={{ letterSpacing: '2px' }}
+                        >
+                          FREE
+                        </span>
+                        <span className="text-sm font-bold text-red-600">
+                          -${DELIVERY_FEE.toFixed(2)}
+                        </span>
                       </span>
                     )}
                   </span>
                 </div>
                 {subtotal < freeShippingThreshold && (
-                  <div className="flex items-center w-full px-4 py-2 rounded-full shadow bg-gradient-to-r from-blue-50 via-green-50 to-pink-50 border border-blue-100 animate-fade-in overflow-hidden whitespace-nowrap mt-2 mb-2">
-                    <span className="font-extrabold text-green-600 text-lg md:text-xl leading-tight mr-1 animate-bounce">
-                      ₹{(freeShippingThreshold - subtotal).toFixed(0)}
+                  <div className="animate-fade-in mt-2 mb-2 flex w-full items-center overflow-hidden rounded-full border border-blue-100 bg-gradient-to-r from-blue-50 via-green-50 to-pink-50 px-4 py-2 whitespace-nowrap shadow">
+                    <span className="mr-1 animate-bounce text-lg leading-tight font-extrabold text-green-600 md:text-xl">
+                      ${(freeShippingThreshold - subtotal).toFixed(0)}
                     </span>
-                    <span className="font-medium text-base md:text-lg text-gray-500 align-middle ml-1" style={{ fontWeight: 500 }}>
-                      away from <span className="text-green-600 font-bold">FREE delivery!</span>
+                    <span
+                      className="ml-1 align-middle text-base font-medium text-gray-500 md:text-lg"
+                      style={{ fontWeight: 500 }}
+                    >
+                      away from <span className="font-bold text-green-600">FREE delivery!</span>
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between items-center text-gray-700 mt-2">
-                  <span className="flex items-center gap-2"><FaReceipt className="text-purple-400" /> Service Fee <span className="ml-2 text-xs text-gray-500">(2% of subtotal)</span></span>
-                  <span>₹{serviceFee.toFixed(2)}</span>
+                <div className="mt-2 flex items-center justify-between text-gray-700">
+                  <span className="flex items-center gap-2">
+                    <FaReceipt className="text-purple-400" /> Service Fee{' '}
+                    <span className="ml-2 text-xs text-gray-500">(2% of subtotal)</span>
+                  </span>
+                  <span>${serviceFee.toFixed(2)}</span>
                 </div>
-                <div className="border-t border-gray-200 pt-5 flex justify-between items-center text-gray-900 font-extrabold text-2xl">
+                <div className="flex items-center justify-between border-t border-gray-200 pt-5 text-2xl font-extrabold text-gray-900">
                   <span>Order Total</span>
-                  <span>₹{orderTotal.toFixed(2)}</span>
+                  <span>${orderTotal.toFixed(2)}</span>
                 </div>
               </div>
               <button
                 onClick={handleCheckout}
-                className="w-full bg-gradient-to-r from-blue-400 to-pink-400 text-white py-4 px-6 rounded-full text-lg font-bold shadow hover:scale-105 hover:shadow-lg transition-all duration-200 mt-8 flex items-center justify-center gap-2"
+                className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-400 to-pink-400 px-6 py-4 text-lg font-bold text-white shadow transition-all duration-200 hover:scale-105 hover:shadow-lg"
               >
                 <FaArrowRight /> Proceed to Checkout
               </button>
@@ -238,4 +282,4 @@ export default function CartPage() {
       </div>
     </div>
   );
-} 
+}

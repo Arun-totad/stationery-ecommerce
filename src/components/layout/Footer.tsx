@@ -48,13 +48,25 @@ const navigation = {
 export default function Footer() {
   return (
     <footer className="relative z-10">
-      <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-blue-500 via-pink-400 to-blue-700 opacity-90 blur-sm rounded-t-3xl" style={{ zIndex: 0 }} />
-      <div className="relative mx-auto max-w-7xl overflow-hidden px-6 py-14 sm:py-20 lg:px-8 rounded-t-3xl" style={{ zIndex: 1 }}>
-        <hr className="mb-8 border-0 h-1 bg-gradient-to-r from-blue-300 via-pink-200 to-blue-400 rounded-full opacity-70" />
-        <nav className="-mb-6 columns-2 sm:flex sm:justify-center sm:space-x-12 mb-8" aria-label="Footer">
+      <div
+        className="absolute inset-0 h-full w-full rounded-t-3xl bg-gradient-to-br from-blue-500 via-pink-400 to-blue-700 opacity-90 blur-sm"
+        style={{ zIndex: 0 }}
+      />
+      <div
+        className="relative mx-auto max-w-7xl overflow-hidden rounded-t-3xl px-6 py-14 sm:py-20 lg:px-8"
+        style={{ zIndex: 1 }}
+      >
+        <hr className="mb-8 h-1 rounded-full border-0 bg-gradient-to-r from-blue-300 via-pink-200 to-blue-400 opacity-70" />
+        <nav
+          className="-mb-6 mb-8 columns-2 sm:flex sm:justify-center sm:space-x-12"
+          aria-label="Footer"
+        >
           {navigation.main.map((item) => (
             <div key={item.name} className="pb-6">
-              <Link href={item.href} className="text-lg font-bold leading-6 text-white hover:underline hover:underline-offset-4 hover:text-pink-200 transition-all duration-200">
+              <Link
+                href={item.href}
+                className="text-lg leading-6 font-bold text-white transition-all duration-200 hover:text-pink-200 hover:underline hover:underline-offset-4"
+              >
                 {item.name}
               </Link>
             </div>
@@ -62,7 +74,11 @@ export default function Footer() {
         </nav>
         <div className="mt-8 flex justify-center space-x-10">
           {navigation.social.map((item) => (
-            <Link key={item.name} href={item.href} className="text-white hover:text-pink-200 transition-all duration-200">
+            <Link
+              key={item.name}
+              href={item.href}
+              className="text-white transition-all duration-200 hover:text-pink-200"
+            >
               <span className="sr-only">{item.name}</span>
               <item.icon className="h-8 w-8" aria-hidden="true" />
             </Link>
@@ -74,4 +90,4 @@ export default function Footer() {
       </div>
     </footer>
   );
-} 
+}

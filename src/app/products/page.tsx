@@ -6,11 +6,23 @@ import { db } from '@/lib/firebase';
 import { Product, Vendor } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image'; // For optimized image handling
-import { FaSearch, FaMapMarkerAlt, FaInfoCircle, FaBoxOpen, FaCheckCircle, FaTimesCircle, FaShoppingCart } from 'react-icons/fa';
+import {
+  FaSearch,
+  FaMapMarkerAlt,
+  FaInfoCircle,
+  FaBoxOpen,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaShoppingCart,
+} from 'react-icons/fa';
 import { useSearchParams } from 'next/navigation';
 
 function getInitials(name: string = ''): string {
-  return name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+  return name
+    .split(' ')
+    .map((n: string) => n[0])
+    .join('')
+    .toUpperCase();
 }
 
 export default function ProductsPage() {
@@ -22,7 +34,8 @@ export default function ProductsPage() {
   const [vendorSearch, setVendorSearch] = useState('');
   const [productSearch, setProductSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const searchParams =
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,9 +55,9 @@ export default function ProductsPage() {
         const productsCollectionRef = collection(db, 'products');
         const q = query(productsCollectionRef);
         const querySnapshot = await getDocs(q);
-        const productsList = querySnapshot.docs.map(doc => ({
+        const productsList = querySnapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data() as Omit<Product, 'id'>
+          ...(doc.data() as Omit<Product, 'id'>),
         }));
         setProducts(productsList);
       } catch (err: any) {
@@ -68,16 +81,12 @@ export default function ProductsPage() {
   }, []);
 
   // Filter vendors by search (shop name, vendor name, location)
-  const filteredVendors = vendors.filter(vendor => {
+  const filteredVendors = vendors.filter((vendor) => {
     const shopName = (vendor.shopName || '').toLowerCase();
     const vendorName = (vendor.displayName || '').toLowerCase();
     const location = (vendor.shopAddress || '').toLowerCase();
     const search = vendorSearch.toLowerCase();
-    return (
-      shopName.includes(search) ||
-      vendorName.includes(search) ||
-      location.includes(search)
-    );
+    return shopName.includes(search) || vendorName.includes(search) || location.includes(search);
   });
   // Filter products by selected vendor and search
   const vendorProducts = selectedVendor
@@ -100,7 +109,7 @@ export default function ProductsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
+      <div className="flex min-h-screen items-center justify-center bg-gray-100">
         <p className="text-gray-700">Loading products...</p>
       </div>
     );
@@ -108,7 +117,7 @@ export default function ProductsPage() {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
+      <div className="flex min-h-screen items-center justify-center bg-gray-100">
         <p className="text-red-500">{error}</p>
       </div>
     );
@@ -118,22 +127,22 @@ export default function ProductsPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-10">
       <div className="container mx-auto px-4">
         {/* Vendor Search Bar */}
-        <div className="mb-4 flex justify-between items-center gap-4">
+        <div className="mb-4 flex items-center justify-between gap-4">
           <div className="relative w-full max-w-xs">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <span className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400">
               <FaSearch />
             </span>
             <input
               type="text"
               placeholder="Search vendors by shop, name, or location..."
               value={vendorSearch}
-              onChange={e => setVendorSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900 bg-white/80 backdrop-blur"
+              onChange={(e) => setVendorSearch(e.target.value)}
+              className="w-full rounded-full border border-gray-200 bg-white/80 py-2 pr-4 pl-10 text-gray-900 shadow-sm backdrop-blur focus:ring-2 focus:ring-blue-400 focus:outline-none"
             />
           </div>
           {vendorSearch && (
             <button
-              className="ml-2 px-3 py-2 bg-gray-200 rounded-full text-gray-700 hover:bg-gray-300 shadow"
+              className="ml-2 rounded-full bg-gray-200 px-3 py-2 text-gray-700 shadow hover:bg-gray-300"
               onClick={() => setVendorSearch('')}
             >
               Clear
@@ -141,40 +150,58 @@ export default function ProductsPage() {
           )}
         </div>
         {/* Sticky Horizontal Vendor Card List */}
-        <div className="mb-8 sticky top-0 z-20 bg-gradient-to-r from-white/80 to-blue-50/80 pt-2 pb-2 rounded-xl shadow-lg backdrop-blur">
-          <div className="flex gap-4 pb-2 overflow-x-auto">
+        <div className="sticky top-0 z-20 mb-8 rounded-xl bg-gradient-to-r from-white/80 to-blue-50/80 pt-2 pb-2 shadow-lg backdrop-blur">
+          <div className="flex gap-4 overflow-x-auto pb-2">
             {/* Vendor Cards */}
             {filteredVendors.length === 0 ? (
-              <div className="text-gray-500 px-4 py-8">No vendors found.</div>
+              <div className="px-4 py-8 text-gray-500">No vendors found.</div>
             ) : (
               filteredVendors.map((vendor) => {
                 const location = (vendor.shopAddress || '').toLowerCase();
                 return (
                   <button
                     key={vendor.uid}
-                    className={`min-w-[240px] flex-shrink-0 bg-white/70 backdrop-blur rounded-2xl shadow-lg p-5 flex flex-col items-center border-2 transition-all duration-200 ${selectedVendor === vendor.uid ? 'border-pink-500 scale-105 ring-2 ring-pink-200' : 'border-transparent hover:border-blue-400 hover:scale-105'} relative group`}
+                    className={`flex min-w-[240px] flex-shrink-0 flex-col items-center rounded-2xl border-2 bg-white/70 p-5 shadow-lg backdrop-blur transition-all duration-200 ${selectedVendor === vendor.uid ? 'scale-105 border-pink-500 ring-2 ring-pink-200' : 'border-transparent hover:scale-105 hover:border-blue-400'} group relative`}
                     onClick={() => setSelectedVendor(vendor.uid)}
                   >
                     {/* Selected badge */}
                     {selectedVendor === vendor.uid && (
-                      <span className="absolute top-2 right-2 bg-pink-500 text-white text-xs px-2 py-0.5 rounded-full shadow flex items-center gap-1"><FaCheckCircle className="inline" /> Selected</span>
+                      <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-pink-500 px-2 py-0.5 text-xs text-white shadow">
+                        <FaCheckCircle className="inline" /> Selected
+                      </span>
                     )}
                     {vendor.image ? (
-                      <img src={vendor.image} alt={vendor.shopName || vendor.displayName} className="w-14 h-14 rounded-full object-cover mb-2 shadow" />
+                      <img
+                        src={vendor.image}
+                        alt={vendor.shopName || vendor.displayName}
+                        className="mb-2 h-14 w-14 rounded-full object-cover shadow"
+                      />
                     ) : (
-                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-300 via-purple-300 to-pink-300 flex items-center justify-center mb-2 shadow">
-                        <span className="text-2xl font-bold text-white drop-shadow">{getInitials(vendor.shopName || vendor.displayName)}</span>
+                      <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-300 via-purple-300 to-pink-300 shadow">
+                        <span className="text-2xl font-bold text-white drop-shadow">
+                          {getInitials(vendor.shopName || vendor.displayName)}
+                        </span>
                       </div>
                     )}
-                    <span className="font-semibold text-gray-900 mb-1 truncate w-full text-center text-lg">{vendor.shopName || vendor.displayName}</span>
-                    <span className="text-xs text-gray-700 mb-1 text-center w-full truncate flex items-center justify-center gap-1"><FaInfoCircle className="inline" /> {vendor.displayName}</span>
+                    <span className="mb-1 w-full truncate text-center text-lg font-semibold text-gray-900">
+                      {vendor.shopName || vendor.displayName}
+                    </span>
+                    <span className="mb-1 flex w-full items-center justify-center gap-1 truncate text-center text-xs text-gray-700">
+                      <FaInfoCircle className="inline" /> {vendor.displayName}
+                    </span>
                     {vendor.description && (
-                      <span className="text-xs text-gray-600 mb-1 text-center w-full truncate flex items-center justify-center gap-1"><FaBoxOpen className="inline" /> {vendor.description}</span>
+                      <span className="mb-1 flex w-full items-center justify-center gap-1 truncate text-center text-xs text-gray-600">
+                        <FaBoxOpen className="inline" /> {vendor.description}
+                      </span>
                     )}
                     {vendor.shopAddress && (
-                      <span className="text-xs text-gray-500 mb-1 text-center w-full truncate flex items-center justify-center gap-1"><FaMapMarkerAlt className="inline" /> {vendor.shopAddress}</span>
+                      <span className="mb-1 flex w-full items-center justify-center gap-1 truncate text-center text-xs text-gray-500">
+                        <FaMapMarkerAlt className="inline" /> {vendor.shopAddress}
+                      </span>
                     )}
-                    <span className="text-xs text-gray-500 flex items-center gap-1"><FaBoxOpen className="inline" /> {vendor.products?.length || 0} products</span>
+                    <span className="flex items-center gap-1 text-xs text-gray-500">
+                      <FaBoxOpen className="inline" /> {vendor.products?.length || 0} products
+                    </span>
                   </button>
                 );
               })
@@ -183,10 +210,10 @@ export default function ProductsPage() {
         </div>
         {/* Category Filter (show only if vendor is selected and has categories) */}
         {selectedVendor && vendorCategories.length > 0 && (
-          <div className="mb-6 flex flex-wrap gap-3 items-center justify-start">
-            <span className="font-semibold text-gray-700 mr-2">Filter by Category:</span>
+          <div className="mb-6 flex flex-wrap items-center justify-start gap-3">
+            <span className="mr-2 font-semibold text-gray-700">Filter by Category:</span>
             <button
-              className={`px-4 py-1 rounded-full border text-sm font-medium shadow transition-all duration-150 ${!selectedCategory ? 'bg-gradient-to-r from-blue-400 to-pink-400 text-white border-transparent' : 'bg-white/80 text-gray-800 border-gray-200 hover:bg-blue-50'}`}
+              className={`rounded-full border px-4 py-1 text-sm font-medium shadow transition-all duration-150 ${!selectedCategory ? 'border-transparent bg-gradient-to-r from-blue-400 to-pink-400 text-white' : 'border-gray-200 bg-white/80 text-gray-800 hover:bg-blue-50'}`}
               onClick={() => setSelectedCategory(null)}
             >
               All
@@ -194,7 +221,7 @@ export default function ProductsPage() {
             {vendorCategories.map((cat) => (
               <button
                 key={cat}
-                className={`px-4 py-1 rounded-full border text-sm font-medium shadow transition-all duration-150 ${selectedCategory === cat ? 'bg-gradient-to-r from-blue-400 to-pink-400 text-white border-transparent' : 'bg-white/80 text-gray-800 border-gray-200 hover:bg-blue-50'}`}
+                className={`rounded-full border px-4 py-1 text-sm font-medium shadow transition-all duration-150 ${selectedCategory === cat ? 'border-transparent bg-gradient-to-r from-blue-400 to-pink-400 text-white' : 'border-gray-200 bg-white/80 text-gray-800 hover:bg-blue-50'}`}
                 onClick={() => setSelectedCategory(cat)}
               >
                 {cat}
@@ -203,23 +230,23 @@ export default function ProductsPage() {
           </div>
         )}
         {/* Product Search Bar */}
-        <div className="mb-6 flex justify-between items-center gap-4">
+        <div className="mb-6 flex items-center justify-between gap-4">
           <div className="relative w-full max-w-xs">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <span className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400">
               <FaSearch />
             </span>
             <input
               type="text"
               placeholder="Search products..."
               value={productSearch}
-              onChange={e => setProductSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900 bg-white/80 backdrop-blur"
+              onChange={(e) => setProductSearch(e.target.value)}
+              className="w-full rounded-full border border-gray-200 bg-white/80 py-2 pr-4 pl-10 text-gray-900 shadow-sm backdrop-blur focus:ring-2 focus:ring-blue-400 focus:outline-none"
               disabled={!selectedVendor}
             />
           </div>
           {productSearch && (
             <button
-              className="ml-2 px-3 py-2 bg-gray-200 rounded-full text-gray-700 hover:bg-gray-300 shadow"
+              className="ml-2 rounded-full bg-gray-200 px-3 py-2 text-gray-700 shadow hover:bg-gray-300"
               onClick={() => setProductSearch('')}
               disabled={!selectedVendor}
             >
@@ -229,9 +256,9 @@ export default function ProductsPage() {
         </div>
         {/* Main Products Grid */}
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-extrabold text-gray-900 mb-2 inline-block relative">
+          <h1 className="relative mb-2 inline-block text-4xl font-extrabold text-gray-900">
             Our Products
-            <span className="block h-1 w-1/2 mx-auto bg-gradient-to-r from-pink-400 via-blue-400 to-purple-400 rounded-full mt-2"></span>
+            <span className="mx-auto mt-2 block h-1 w-1/2 rounded-full bg-gradient-to-r from-pink-400 via-blue-400 to-purple-400"></span>
           </h1>
         </div>
         {!selectedVendor ? (
@@ -243,37 +270,50 @@ export default function ProductsPage() {
             <p>No products available for this vendor.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {filteredProducts.map((product) => (
               <Link href={`/products/${product.id}`} key={product.id} className="group">
-                <div className="bg-white/80 backdrop-blur rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-shadow duration-200 h-full flex flex-col relative border border-gray-100 group-hover:border-blue-300 group-hover:scale-[1.03] group-hover:ring-2 group-hover:ring-blue-100">
-                  <div className="relative w-full h-48 bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 flex items-center justify-center">
+                <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white/80 shadow-xl backdrop-blur transition-shadow duration-200 group-hover:scale-[1.03] group-hover:border-blue-300 group-hover:ring-2 group-hover:ring-blue-100 hover:shadow-2xl">
+                  <div className="relative flex h-48 w-full items-center justify-center bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200">
                     {product.images && product.images.length > 0 ? (
                       <Image
                         src={product.images[0]}
                         alt={product.name}
                         fill
                         style={{ objectFit: 'cover' }}
-                        className="hover:scale-105 transition-transform duration-200 rounded-b-none"
+                        className="rounded-b-none transition-transform duration-200 hover:scale-105"
                       />
                     ) : (
                       <span className="flex flex-col items-center text-gray-400">
-                        <FaBoxOpen className="text-4xl mb-2" />
+                        <FaBoxOpen className="mb-2 text-4xl" />
                         No Image
                       </span>
                     )}
                     {/* Stock badge */}
-                    <span className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-semibold shadow flex items-center gap-1 ${product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>{product.stock > 0 ? <FaCheckCircle /> : <FaTimesCircle />} {product.stock > 0 ? 'In Stock' : 'Out of Stock'}</span>
+                    <span
+                      className={`absolute top-2 left-2 flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold shadow ${product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}
+                    >
+                      {product.stock > 0 ? <FaCheckCircle /> : <FaTimesCircle />}{' '}
+                      {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                    </span>
                     {/* Price badge */}
-                    <span className="absolute top-2 right-2 bg-gradient-to-r from-pink-400 to-blue-400 text-white px-3 py-1 rounded-full text-sm font-bold shadow">₹{product.price.toFixed(2)}</span>
+                    <span className="absolute top-2 right-2 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 px-3 py-1 text-sm font-bold text-white shadow">
+                      ${product.price.toFixed(2)}
+                    </span>
                   </div>
-                  <div className="p-5 flex flex-col justify-between flex-grow">
-                    <h2 className="text-lg font-bold text-gray-800 mb-1 truncate">{product.name}</h2>
-                    <p className="text-gray-600 text-sm mb-3 line-clamp-2 flex items-center gap-1"><FaInfoCircle className="inline" /> {product.description}</p>
-                    <div className="flex items-center justify-between mt-auto">
-                      <span className="text-xs text-gray-500 flex items-center gap-1"><FaBoxOpen className="inline" /> Stock: {product.stock}</span>
+                  <div className="flex flex-grow flex-col justify-between p-5">
+                    <h2 className="mb-1 truncate text-lg font-bold text-gray-800">
+                      {product.name}
+                    </h2>
+                    <p className="mb-3 line-clamp-2 flex items-center gap-1 text-sm text-gray-600">
+                      <FaInfoCircle className="inline" /> {product.description}
+                    </p>
+                    <div className="mt-auto flex items-center justify-between">
+                      <span className="flex items-center gap-1 text-xs text-gray-500">
+                        <FaBoxOpen className="inline" /> Stock: {product.stock}
+                      </span>
                       {/* Add to Cart button on hover */}
-                      <button className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-r from-blue-400 to-pink-400 text-white px-3 py-1 rounded-full flex items-center gap-2 shadow hover:scale-105">
+                      <button className="flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-400 to-pink-400 px-3 py-1 text-white opacity-0 shadow transition-opacity duration-200 group-hover:opacity-100 hover:scale-105">
                         <FaShoppingCart /> Add to Cart
                       </button>
                     </div>
@@ -286,4 +326,4 @@ export default function ProductsPage() {
       </div>
     </div>
   );
-} 
+}

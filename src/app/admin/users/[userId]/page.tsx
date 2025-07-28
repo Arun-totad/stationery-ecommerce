@@ -9,7 +9,12 @@ import { db } from '@/lib/firebase';
 import { User, UserRole, Product, Order, SupportTicket } from '@/types';
 import { toast } from 'react-hot-toast';
 import { Timestamp } from 'firebase/firestore';
-import { UserIcon, EnvelopeIcon as MailIcon, PhoneIcon, MapPinIcon } from '@heroicons/react/24/solid';
+import {
+  UserIcon,
+  EnvelopeIcon as MailIcon,
+  PhoneIcon,
+  MapPinIcon,
+} from '@heroicons/react/24/solid';
 import ConfirmModal from '@/components/ConfirmModal';
 
 export default function UserDetailPage() {
@@ -46,24 +51,33 @@ export default function UserDetailPage() {
             phoneNumber: userData.phoneNumber || null,
             addresses: userData.addresses || [],
             role: userData.role,
-            createdAt: userData.createdAt instanceof Timestamp ? userData.createdAt.toDate() : new Date(userData.createdAt),
-            updatedAt: userData.updatedAt instanceof Timestamp ? userData.updatedAt.toDate() : new Date(userData.updatedAt),
+            createdAt:
+              userData.createdAt instanceof Timestamp
+                ? userData.createdAt.toDate()
+                : new Date(userData.createdAt),
+            updatedAt:
+              userData.updatedAt instanceof Timestamp
+                ? userData.updatedAt.toDate()
+                : new Date(userData.updatedAt),
           } as User;
           setTargetUser(fetchedUser);
 
           // Fetch orders for this user
           const ordersQuery = query(collection(db, 'orders'), where('userId', '==', userSnap.id));
           const ordersSnapshot = await getDocs(ordersQuery);
-          const fetchedOrders = ordersSnapshot.docs.map(doc => ({
+          const fetchedOrders = ordersSnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
           })) as Order[];
           setOrders(fetchedOrders);
 
           // Fetch support tickets for this user
-          const ticketsQuery = query(collection(db, 'supportTickets'), where('userId', '==', userSnap.id));
+          const ticketsQuery = query(
+            collection(db, 'supportTickets'),
+            where('userId', '==', userSnap.id)
+          );
           const ticketsSnapshot = await getDocs(ticketsQuery);
-          const fetchedTickets = ticketsSnapshot.docs.map(doc => ({
+          const fetchedTickets = ticketsSnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
           })) as SupportTicket[];
@@ -76,14 +90,13 @@ export default function UserDetailPage() {
               where('vendorId', '==', fetchedUser.uid)
             );
             const productsSnapshot = await getDocs(productsQuery);
-            const productsData = productsSnapshot.docs.map(doc => ({
+            const productsData = productsSnapshot.docs.map((doc) => ({
               id: doc.id,
               ...doc.data(),
             })) as Product[];
             setProducts(productsData);
             setProductsLoading(false);
           }
-
         } else {
           toast.error('User not found.');
           router.push('/admin');
@@ -115,7 +128,7 @@ export default function UserDetailPage() {
     try {
       const userRef = doc(db, 'users', targetUser.uid);
       await updateDoc(userRef, { role: pendingRole });
-      setTargetUser(prevUser => prevUser ? { ...prevUser, role: pendingRole } : null);
+      setTargetUser((prevUser) => (prevUser ? { ...prevUser, role: pendingRole } : null));
       toast.success(`${action}d user successfully!`);
     } catch (error) {
       console.error(`Error ${action.toLowerCase()}ing user:`, error);
@@ -136,7 +149,7 @@ export default function UserDetailPage() {
     try {
       const userRef = doc(db, 'users', targetUser.uid);
       await updateDoc(userRef, { role: 'admin-manager' });
-      setTargetUser(prevUser => prevUser ? { ...prevUser, role: 'admin-manager' } : null);
+      setTargetUser((prevUser) => (prevUser ? { ...prevUser, role: 'admin-manager' } : null));
       toast.success('User promoted to admin-manager!');
     } catch (error) {
       console.error('Error promoting user:', error);
@@ -183,8 +196,8 @@ export default function UserDetailPage() {
   if (loading) {
     return (
       <ProtectedRoute allowedRoles={['admin', 'admin-manager']}>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
         </div>
       </ProtectedRoute>
     );
@@ -193,7 +206,7 @@ export default function UserDetailPage() {
   if (!targetUser) {
     return (
       <ProtectedRoute allowedRoles={['admin', 'admin-manager']}>
-        <div className="min-h-screen flex items-center justify-center text-gray-900">
+        <div className="flex min-h-screen items-center justify-center text-gray-900">
           User details not available.
         </div>
       </ProtectedRoute>
@@ -204,85 +217,121 @@ export default function UserDetailPage() {
 
   return (
     <ProtectedRoute allowedRoles={['admin', 'admin-manager']}>
-      <div className="flex flex-col items-center justify-center min-h-[80vh] bg-gray-100 py-10">
-        <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-2xl flex flex-col items-center animate-fade-in">
+      <div className="flex min-h-[80vh] flex-col items-center justify-center bg-gray-100 py-10">
+        <div className="animate-fade-in flex w-full max-w-2xl flex-col items-center rounded-3xl bg-white p-8 shadow-2xl">
           {/* Avatar and Name */}
-          <div className="flex flex-col items-center mb-6">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-200 to-pink-200 flex items-center justify-center text-3xl font-bold text-white shadow-lg mb-2">
-              {targetUser.displayName ? targetUser.displayName.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+          <div className="mb-6 flex flex-col items-center">
+            <div className="mb-2 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-blue-200 to-pink-200 text-3xl font-bold text-white shadow-lg">
+              {targetUser.displayName
+                ? targetUser.displayName
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .toUpperCase()
+                : 'U'}
             </div>
-            <h1 className="text-3xl font-extrabold text-gray-900 mb-1">{targetUser.displayName || targetUser.email}</h1>
-            <span className={`px-4 py-1 rounded-full text-base font-semibold
-              ${targetUser.role === 'admin-manager'
-                ? 'bg-purple-100 text-purple-700'
-                : targetUser.role === 'admin'
-                  ? 'bg-yellow-100 text-yellow-700'
-                  : targetUser.role === 'vendor'
-                    ? 'bg-pink-100 text-pink-700'
-                    : 'bg-blue-100 text-blue-700'
-              }`}>
-              {targetUser.role.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            <h1 className="mb-1 text-3xl font-extrabold text-gray-900">
+              {targetUser.displayName || targetUser.email}
+            </h1>
+            <span
+              className={`rounded-full px-4 py-1 text-base font-semibold ${
+                targetUser.role === 'admin-manager'
+                  ? 'bg-purple-100 text-purple-700'
+                  : targetUser.role === 'admin'
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : targetUser.role === 'vendor'
+                      ? 'bg-pink-100 text-pink-700'
+                      : 'bg-blue-100 text-blue-700'
+              }`}
+            >
+              {targetUser.role.replace('-', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
             </span>
           </div>
 
           {/* Info Cards */}
           <div className="w-full space-y-5">
             {/* Basic Info */}
-            <div className="bg-white/70 backdrop-blur-md rounded-3xl shadow-xl p-7 mb-6 border border-blue-100">
-              <div className="flex items-center gap-2 mb-4">
-                <UserIcon className="text-blue-500 w-7 h-7" />
-                <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Basic Information</h2>
+            <div className="mb-6 rounded-3xl border border-blue-100 bg-white/70 p-7 shadow-xl backdrop-blur-md">
+              <div className="mb-4 flex items-center gap-2">
+                <UserIcon className="h-7 w-7 text-blue-500" />
+                <h2 className="text-2xl font-extrabold tracking-tight text-gray-900">
+                  Basic Information
+                </h2>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+              <div className="grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2">
                 <div>
-                  <div className="flex items-center gap-2 text-gray-500 text-sm"><MailIcon className="w-4 h-4" /> Email</div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <MailIcon className="h-4 w-4" /> Email
+                  </div>
                   <div className="font-semibold text-gray-900">{targetUser.email || 'N/A'}</div>
                 </div>
                 <div>
-                  <div className="flex items-center gap-2 text-gray-500 text-sm"><PhoneIcon className="w-4 h-4" /> Phone Number</div>
-                  <div className="font-semibold text-gray-900">{targetUser.phoneNumber || 'N/A'}</div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <PhoneIcon className="h-4 w-4" /> Phone Number
+                  </div>
+                  <div className="font-semibold text-gray-900">
+                    {targetUser.phoneNumber || 'N/A'}
+                  </div>
                 </div>
                 <div>
-                  <div className="text-gray-500 text-sm">Display Name</div>
-                  <div className="font-semibold text-gray-900">{targetUser.displayName || 'N/A'}</div>
+                  <div className="text-sm text-gray-500">Display Name</div>
+                  <div className="font-semibold text-gray-900">
+                    {targetUser.displayName || 'N/A'}
+                  </div>
                 </div>
                 <div>
-                  <div className="text-gray-500 text-sm">Joined On</div>
-                  <div className="font-semibold text-gray-900">{targetUser.createdAt.toLocaleDateString()}</div>
+                  <div className="text-sm text-gray-500">Joined On</div>
+                  <div className="font-semibold text-gray-900">
+                    {targetUser.createdAt.toLocaleDateString()}
+                  </div>
                 </div>
                 <div>
-                  <div className="text-gray-500 text-sm">Last Updated</div>
-                  <div className="font-semibold text-gray-900">{targetUser.updatedAt.toLocaleDateString()}</div>
+                  <div className="text-sm text-gray-500">Last Updated</div>
+                  <div className="font-semibold text-gray-900">
+                    {targetUser.updatedAt.toLocaleDateString()}
+                  </div>
                 </div>
               </div>
             </div>
             {/* Address Info */}
-            <div className="bg-white/70 backdrop-blur-md rounded-3xl shadow-xl p-7 mb-6 border border-pink-100">
-              <div className="flex items-center gap-2 mb-4">
-                <MapPinIcon className="text-pink-500 w-7 h-7" />
-                <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">{targetUser.role === 'vendor' ? 'Shop Address' : 'Address Information'}</h2>
+            <div className="mb-6 rounded-3xl border border-pink-100 bg-white/70 p-7 shadow-xl backdrop-blur-md">
+              <div className="mb-4 flex items-center gap-2">
+                <MapPinIcon className="h-7 w-7 text-pink-500" />
+                <h2 className="text-2xl font-extrabold tracking-tight text-gray-900">
+                  {targetUser.role === 'vendor' ? 'Shop Address' : 'Address Information'}
+                </h2>
               </div>
               {targetUser.addresses && targetUser.addresses.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                <div className="grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2">
                   <div>
-                    <div className="text-gray-500 text-sm">Street</div>
-                    <div className="font-semibold text-gray-900">{targetUser.addresses[0].street || 'N/A'}</div>
+                    <div className="text-sm text-gray-500">Street</div>
+                    <div className="font-semibold text-gray-900">
+                      {targetUser.addresses[0].street || 'N/A'}
+                    </div>
                   </div>
                   <div>
-                    <div className="text-gray-500 text-sm">City</div>
-                    <div className="font-semibold text-gray-900">{targetUser.addresses[0].city || 'N/A'}</div>
+                    <div className="text-sm text-gray-500">City</div>
+                    <div className="font-semibold text-gray-900">
+                      {targetUser.addresses[0].city || 'N/A'}
+                    </div>
                   </div>
                   <div>
-                    <div className="text-gray-500 text-sm">State</div>
-                    <div className="font-semibold text-gray-900">{targetUser.addresses[0].state || 'N/A'}</div>
+                    <div className="text-sm text-gray-500">State</div>
+                    <div className="font-semibold text-gray-900">
+                      {targetUser.addresses[0].state || 'N/A'}
+                    </div>
                   </div>
                   <div>
-                    <div className="text-gray-500 text-sm">Zip Code</div>
-                    <div className="font-semibold text-gray-900">{targetUser.addresses[0].zipCode || 'N/A'}</div>
+                    <div className="text-sm text-gray-500">Zip Code</div>
+                    <div className="font-semibold text-gray-900">
+                      {targetUser.addresses[0].zipCode || 'N/A'}
+                    </div>
                   </div>
                   <div className="md:col-span-2">
-                    <div className="text-gray-500 text-sm">Country</div>
-                    <div className="font-semibold text-gray-900">{targetUser.addresses[0].country || 'N/A'}</div>
+                    <div className="text-sm text-gray-500">Country</div>
+                    <div className="font-semibold text-gray-900">
+                      {targetUser.addresses[0].country || 'N/A'}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -291,18 +340,24 @@ export default function UserDetailPage() {
             </div>
             {/* Orders Info Card */}
             {orders.length > 0 && (
-              <div className="bg-gradient-to-r from-blue-50 via-pink-50 to-yellow-50 rounded-2xl shadow p-5">
-                <h2 className="text-xl font-bold text-gray-800 mb-2">Orders</h2>
-                <div className="text-gray-700 mb-2">{orders.length} order{orders.length > 1 ? 's' : ''} found for this user.</div>
+              <div className="rounded-2xl bg-gradient-to-r from-blue-50 via-pink-50 to-yellow-50 p-5 shadow">
+                <h2 className="mb-2 text-xl font-bold text-gray-800">Orders</h2>
+                <div className="mb-2 text-gray-700">
+                  {orders.length} order{orders.length > 1 ? 's' : ''} found for this user.
+                </div>
                 <div className="flex flex-col gap-2">
-                  {orders.map(order => (
+                  {orders.map((order) => (
                     <button
                       key={order.id}
-                      className="flex items-center justify-between px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow transition text-left"
+                      className="flex items-center justify-between rounded-lg bg-blue-600 px-4 py-2 text-left font-semibold text-white shadow transition hover:bg-blue-700"
                       onClick={() => router.push(`/admin/orders/${order.id}`)}
                     >
                       <span>Order #{order.orderNumber || order.id.slice(-6).toUpperCase()}</span>
-                      <span className={`ml-4 text-xs px-2 py-1 rounded-full capitalize font-semibold ${getOrderStatusBadge(order.status)}`}>{order.status}</span>
+                      <span
+                        className={`ml-4 rounded-full px-2 py-1 text-xs font-semibold capitalize ${getOrderStatusBadge(order.status)}`}
+                      >
+                        {order.status}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -310,18 +365,27 @@ export default function UserDetailPage() {
             )}
             {/* Support Tickets Info Card */}
             {tickets.length > 0 && (
-              <div className="bg-gradient-to-r from-blue-50 via-pink-50 to-yellow-50 rounded-2xl shadow p-5">
-                <h2 className="text-xl font-bold text-gray-800 mb-2">Support Tickets</h2>
-                <div className="text-gray-700 mb-2">{tickets.length} ticket{tickets.length > 1 ? 's' : ''} found for this user.</div>
+              <div className="rounded-2xl bg-gradient-to-r from-blue-50 via-pink-50 to-yellow-50 p-5 shadow">
+                <h2 className="mb-2 text-xl font-bold text-gray-800">Support Tickets</h2>
+                <div className="mb-2 text-gray-700">
+                  {tickets.length} ticket{tickets.length > 1 ? 's' : ''} found for this user.
+                </div>
                 <div className="flex flex-col gap-2">
-                  {tickets.map(ticket => (
+                  {tickets.map((ticket) => (
                     <button
                       key={ticket.id}
-                      className="flex items-center justify-between px-4 py-2 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-semibold shadow transition text-left"
+                      className="flex items-center justify-between rounded-lg bg-pink-600 px-4 py-2 text-left font-semibold text-white shadow transition hover:bg-pink-700"
                       onClick={() => router.push(`/admin/support/${ticket.id}`)}
                     >
-                      <span>Ticket #{ticket.id.slice(-6).toUpperCase()} - {ticket.subject || 'No Subject'}</span>
-                      <span className={`ml-4 text-xs px-2 py-1 rounded-full capitalize font-semibold ${getTicketStatusBadge(ticket.status)}`}>{ticket.status}</span>
+                      <span>
+                        Ticket #{ticket.id.slice(-6).toUpperCase()} -{' '}
+                        {ticket.subject || 'No Subject'}
+                      </span>
+                      <span
+                        className={`ml-4 rounded-full px-2 py-1 text-xs font-semibold capitalize ${getTicketStatusBadge(ticket.status)}`}
+                      >
+                        {ticket.status}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -331,32 +395,53 @@ export default function UserDetailPage() {
 
           {/* Products Section (only for vendors) */}
           {targetUser.role === 'vendor' && (
-            <div className="bg-white border border-gray-200 p-6 rounded-3xl shadow-2xl mt-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <span className="inline-block bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-lg">📦</span>
-                Products <span className="ml-2 text-base font-semibold text-gray-500">({products.length})</span>
+            <div className="mt-8 rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl">
+              <h2 className="mb-6 flex items-center gap-2 text-2xl font-bold text-gray-900">
+                <span className="inline-block rounded-full bg-yellow-100 px-3 py-1 text-lg text-yellow-700">
+                  📦
+                </span>
+                Products{' '}
+                <span className="ml-2 text-base font-semibold text-gray-500">
+                  ({products.length})
+                </span>
               </h2>
               {productsLoading ? (
-                <div className="flex justify-center items-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500"></div>
+                <div className="flex h-32 items-center justify-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-yellow-500"></div>
                 </div>
               ) : products.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   {products.map((product) => (
                     <div
                       key={product.id}
-                      className="group cursor-pointer bg-gradient-to-br from-yellow-50 via-pink-50 to-blue-50 rounded-2xl shadow-lg p-5 flex flex-col gap-2 border border-gray-100 hover:shadow-yellow-200 transition-all duration-200 hover:scale-[1.025]"
+                      className="group flex cursor-pointer flex-col gap-2 rounded-2xl border border-gray-100 bg-gradient-to-br from-yellow-50 via-pink-50 to-blue-50 p-5 shadow-lg transition-all duration-200 hover:scale-[1.025] hover:shadow-yellow-200"
                       onClick={() => router.push(`/admin/products/${product.id}`)}
                     >
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-yellow-200 to-pink-200 text-xl font-bold shadow">{product.name ? product.name[0].toUpperCase() : 'P'}</span>
-                        <span className="text-lg font-bold text-gray-900 group-hover:text-yellow-700 transition">{product.name}</span>
+                      <div className="mb-2 flex items-center gap-3">
+                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-yellow-200 to-pink-200 text-xl font-bold shadow">
+                          {product.name ? product.name[0].toUpperCase() : 'P'}
+                        </span>
+                        <span className="text-lg font-bold text-gray-900 transition group-hover:text-yellow-700">
+                          {product.name}
+                        </span>
                       </div>
                       <div className="flex flex-wrap gap-4 text-sm text-gray-700">
-                        <span><span className="font-semibold text-gray-900">Price:</span> ₹{product.price.toFixed(2)}</span>
-                        <span><span className="font-semibold text-gray-900">Stock:</span> {product.stock}</span>
-                        <span><span className="font-semibold text-gray-900">Category:</span> {product.category}</span>
-                        <span><span className="font-semibold text-gray-900">Brand:</span> {product.brand}</span>
+                        <span>
+                          <span className="font-semibold text-gray-900">Price:</span> ₹
+                          {product.price.toFixed(2)}
+                        </span>
+                        <span>
+                          <span className="font-semibold text-gray-900">Stock:</span>{' '}
+                          {product.stock}
+                        </span>
+                        <span>
+                          <span className="font-semibold text-gray-900">Category:</span>{' '}
+                          {product.category}
+                        </span>
+                        <span>
+                          <span className="font-semibold text-gray-900">Brand:</span>{' '}
+                          {product.brand}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -368,13 +453,13 @@ export default function UserDetailPage() {
           )}
 
           {/* Actions */}
-          <div className="bg-gradient-to-r from-blue-50 via-pink-50 to-yellow-50 rounded-2xl shadow p-6 flex flex-col items-center justify-center gap-4 mt-4">
-            <h2 className="text-xl font-bold text-gray-800 mb-2 text-center">Actions</h2>
-            <div className="flex flex-wrap gap-3 items-center justify-center w-full">
+          <div className="mt-4 flex flex-col items-center justify-center gap-4 rounded-2xl bg-gradient-to-r from-blue-50 via-pink-50 to-yellow-50 p-6 shadow">
+            <h2 className="mb-2 text-center text-xl font-bold text-gray-800">Actions</h2>
+            <div className="flex w-full flex-wrap items-center justify-center gap-3">
               {canToggleRole && targetUser.role !== 'vendor' && (
                 <button
                   onClick={handleToggleAdminRole}
-                  className={`px-6 py-2 rounded-lg font-semibold shadow transition duration-200 ease-in-out text-white focus:outline-none focus:ring-2 focus:ring-blue-400 ${targetUser.role === 'admin' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
+                  className={`rounded-lg px-6 py-2 font-semibold text-white shadow transition duration-200 ease-in-out focus:ring-2 focus:ring-blue-400 focus:outline-none ${targetUser.role === 'admin' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
                 >
                   {targetUser.role === 'admin' ? 'Depromote to Customer' : 'Promote to Admin'}
                 </button>
@@ -382,14 +467,14 @@ export default function UserDetailPage() {
               {userRole === 'admin' && targetUser.role === 'admin' && (
                 <button
                   onClick={handlePromoteToAdminManager}
-                  className="px-6 py-2 rounded-lg font-semibold shadow transition duration-200 ease-in-out bg-purple-500 hover:bg-purple-600 text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  className="rounded-lg bg-purple-500 px-6 py-2 font-semibold text-white shadow transition duration-200 ease-in-out hover:bg-purple-600 focus:ring-2 focus:ring-purple-400 focus:outline-none"
                 >
                   Promote to Admin Manager
                 </button>
               )}
               <button
                 onClick={() => router.back()}
-                className="px-6 py-2 rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-100 font-semibold shadow transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="rounded-lg border border-gray-300 bg-white px-6 py-2 font-semibold text-gray-700 shadow transition duration-200 ease-in-out hover:bg-gray-100 focus:ring-2 focus:ring-blue-400 focus:outline-none"
               >
                 Back
               </button>
@@ -417,4 +502,4 @@ export default function UserDetailPage() {
       />
     </ProtectedRoute>
   );
-} 
+}

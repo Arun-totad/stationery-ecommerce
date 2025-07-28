@@ -16,13 +16,15 @@ const AccountEditPage = () => {
     email: '',
     displayName: '',
     phoneNumber: null,
-    addresses: [{
-      street: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      country: '',
-    }],
+    addresses: [
+      {
+        street: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        country: '',
+      },
+    ],
     role: 'customer', // Default role
     createdAt: new Date(), // Initialize createdAt
     updatedAt: new Date(), // Initialize updatedAt
@@ -30,14 +32,18 @@ const AccountEditPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [addressFieldErrors, setAddressFieldErrors] = useState<{ [addressIdx: number]: { [field: string]: string } }>({});
-  const [addresses, setAddresses] = useState<Address[]>([{
-    street: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: '',
-  }]);
+  const [addressFieldErrors, setAddressFieldErrors] = useState<{
+    [addressIdx: number]: { [field: string]: string };
+  }>({});
+  const [addresses, setAddresses] = useState<Address[]>([
+    {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: '',
+    },
+  ]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -51,13 +57,32 @@ const AccountEditPage = () => {
             setFormData({
               ...userData,
               phoneNumber: userData.phoneNumber || null,
-              addresses: userData.addresses && userData.addresses.length > 0 ? userData.addresses : [{
-                street: '', city: '', state: '', zipCode: '', country: ''
-              }],
+              addresses:
+                userData.addresses && userData.addresses.length > 0
+                  ? userData.addresses
+                  : [
+                      {
+                        street: '',
+                        city: '',
+                        state: '',
+                        zipCode: '',
+                        country: '',
+                      },
+                    ],
             });
-            setAddresses(userData.addresses && userData.addresses.length > 0 ? userData.addresses : [{
-              street: '', city: '', state: '', zipCode: '', country: ''
-            }]);
+            setAddresses(
+              userData.addresses && userData.addresses.length > 0
+                ? userData.addresses
+                : [
+                    {
+                      street: '',
+                      city: '',
+                      state: '',
+                      zipCode: '',
+                      country: '',
+                    },
+                  ]
+            );
           } else {
             setFormData((prev) => ({
               ...prev,
@@ -65,16 +90,31 @@ const AccountEditPage = () => {
               email: user.email || '',
               displayName: user.displayName || '',
               phoneNumber: prev.phoneNumber || null,
-              addresses: prev.addresses && prev.addresses.length > 0 ? prev.addresses : [{
-                street: '', city: '', state: '', zipCode: '', country: ''
-              }],
+              addresses:
+                prev.addresses && prev.addresses.length > 0
+                  ? prev.addresses
+                  : [
+                      {
+                        street: '',
+                        city: '',
+                        state: '',
+                        zipCode: '',
+                        country: '',
+                      },
+                    ],
               role: prev.role || 'customer',
               createdAt: prev.createdAt || new Date(),
               updatedAt: prev.updatedAt || new Date(),
             }));
-            setAddresses([{
-              street: '', city: '', state: '', zipCode: '', country: ''
-            }]);
+            setAddresses([
+              {
+                street: '',
+                city: '',
+                state: '',
+                zipCode: '',
+                country: '',
+              },
+            ]);
           }
         } catch (err: any) {
           setError('Failed to load user data: ' + err.message);
@@ -96,13 +136,23 @@ const AccountEditPage = () => {
 
   const handleAddressChange = (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setAddresses((prev) => prev.map((addr, i) =>
-      i === idx ? { ...addr, [name]: name === 'zipCode' ? value.replace(/[^0-9]/g, '').slice(0, 5) : value } : addr
-    ));
+    setAddresses((prev) =>
+      prev.map((addr, i) =>
+        i === idx
+          ? {
+              ...addr,
+              [name]: name === 'zipCode' ? value.replace(/[^0-9]/g, '').slice(0, 5) : value,
+            }
+          : addr
+      )
+    );
   };
 
   const handleAddAddress = () => {
-    setAddresses((prev) => [...prev, { street: '', city: '', state: '', zipCode: '', country: '' }]);
+    setAddresses((prev) => [
+      ...prev,
+      { street: '', city: '', state: '', zipCode: '', country: '' },
+    ]);
   };
 
   const handleRemoveAddress = (idx: number) => {
@@ -119,7 +169,7 @@ const AccountEditPage = () => {
     const updateData: any = {
       displayName: formData.displayName,
       phoneNumber: finalPhoneNumber,
-      addresses: addresses.map(addr => ({
+      addresses: addresses.map((addr) => ({
         street: addr.street || '',
         city: addr.city || '',
         state: addr.state || '',
@@ -202,35 +252,38 @@ const AccountEditPage = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex h-screen items-center justify-center">
         <p>Loading profile...</p>
       </div>
     );
   }
 
-  if (error && !user) { // Only show error if no user and it's a critical error
+  if (error && !user) {
+    // Only show error if no user and it's a critical error
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex h-screen items-center justify-center">
         <p className="text-red-500">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-blue-200 via-pink-100 to-yellow-100">
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-blue-200 via-pink-100 to-yellow-100">
       {/* Animated Blobs */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-pink-200 opacity-40 rounded-full filter blur-3xl animate-blob z-0" />
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-200 opacity-40 rounded-full filter blur-3xl animate-blob animation-delay-2000 z-0" />
-      <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-yellow-100 opacity-30 rounded-full filter blur-2xl animate-blob animation-delay-4000 z-0" />
+      <div className="animate-blob absolute -top-32 -left-32 z-0 h-96 w-96 rounded-full bg-pink-200 opacity-40 blur-3xl filter" />
+      <div className="animate-blob animation-delay-2000 absolute -right-32 -bottom-32 z-0 h-96 w-96 rounded-full bg-blue-200 opacity-40 blur-3xl filter" />
+      <div className="animate-blob animation-delay-4000 absolute top-1/2 left-1/2 z-0 h-72 w-72 rounded-full bg-yellow-100 opacity-30 blur-2xl filter" />
       <div className="relative z-10 w-full max-w-2xl">
-        <div className="bg-white/70 backdrop-blur-lg rounded-3xl shadow-2xl px-8 py-10">
-          <h1 className="text-3xl font-extrabold text-center mb-6 text-gray-900 tracking-tight">Edit My Account</h1>
+        <div className="rounded-3xl bg-white/70 px-8 py-10 shadow-2xl backdrop-blur-lg">
+          <h1 className="mb-6 text-center text-3xl font-extrabold tracking-tight text-gray-900">
+            Edit My Account
+          </h1>
 
           <form onSubmit={handleSubmit} className="space-y-8">
-            <h2 className="text-xl font-bold mb-4 text-gray-900 flex items-center gap-2">
+            <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-gray-900">
               <UserCircleIcon className="h-6 w-6 text-blue-400" /> Profile Information
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div>
                 <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
                   Full Name
@@ -239,7 +292,7 @@ const AccountEditPage = () => {
                   type="text"
                   id="displayName"
                   name="displayName"
-                  className="mt-1 block w-full px-4 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white/80 text-gray-900 text-base shadow-sm placeholder-gray-400"
+                  className="mt-1 block w-full rounded-xl border border-gray-300 bg-white/80 px-4 py-2 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none"
                   value={formData.displayName}
                   onChange={handleChange}
                   autoComplete="name"
@@ -253,7 +306,7 @@ const AccountEditPage = () => {
                   type="email"
                   id="email"
                   name="email"
-                  className="mt-1 block w-full px-4 py-2 rounded-xl border border-gray-300 bg-gray-100 text-gray-500 text-base shadow-sm cursor-not-allowed"
+                  className="mt-1 block w-full cursor-not-allowed rounded-xl border border-gray-300 bg-gray-100 px-4 py-2 text-base text-gray-500 shadow-sm"
                   value={formData.email}
                   disabled
                   autoComplete="email"
@@ -267,7 +320,7 @@ const AccountEditPage = () => {
                   type="text"
                   id="phoneNumber"
                   name="phoneNumber"
-                  className="mt-1 block w-full px-4 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white/80 text-gray-900 text-base shadow-sm placeholder-gray-400"
+                  className="mt-1 block w-full rounded-xl border border-gray-300 bg-white/80 px-4 py-2 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none"
                   value={formData.phoneNumber || ''}
                   onChange={handleChange}
                   autoComplete="tel"
@@ -275,75 +328,164 @@ const AccountEditPage = () => {
               </div>
             </div>
 
-            <div className="border-b border-gray-200 my-6"></div>
+            <div className="my-6 border-b border-gray-200"></div>
 
-            <h2 className="text-xl font-bold mb-4 text-gray-900 flex items-center gap-2">
+            <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-gray-900">
               <MapPinIcon className="h-6 w-6 text-blue-400" /> Address Information
             </h2>
-            <button type="button" onClick={handleAddAddress} className="inline-flex items-center gap-2 py-2 px-4 rounded-full font-bold text-base bg-blue-100 text-blue-700 shadow hover:bg-blue-200 transition-all mb-6">
+            <button
+              type="button"
+              onClick={handleAddAddress}
+              className="mb-6 inline-flex items-center gap-2 rounded-full bg-blue-100 px-4 py-2 text-base font-bold text-blue-700 shadow transition-all hover:bg-blue-200"
+            >
               <PlusIcon className="h-5 w-5" /> Add Address
             </button>
             {addresses.map((address, idx) => (
-              <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4 border p-4 rounded-xl relative bg-white/60">
+              <div
+                key={idx}
+                className="relative mb-4 grid grid-cols-1 gap-6 rounded-xl border bg-white/60 p-4 md:grid-cols-2"
+              >
                 {addresses.length > 1 && (
                   <div className="absolute -top-4 -right-4 z-20">
                     <button
                       type="button"
                       onClick={() => handleRemoveAddress(idx)}
-                      className="group flex items-center justify-center w-12 h-12 rounded-full bg-red-500 border-4 border-white shadow-xl hover:bg-red-600 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-red-400"
+                      className="group flex h-12 w-12 items-center justify-center rounded-full border-4 border-white bg-red-500 shadow-xl transition-all duration-150 hover:bg-red-600 focus:ring-2 focus:ring-red-400 focus:outline-none"
                       title="Remove Address"
                       aria-label="Remove Address"
                     >
                       <TrashIcon className="h-7 w-7 text-white" />
-                      <span className="absolute top-14 right-1/2 translate-x-1/2 px-3 py-1 text-xs rounded bg-black text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-lg">Remove Address</span>
+                      <span className="pointer-events-none absolute top-14 right-1/2 translate-x-1/2 rounded bg-black px-3 py-1 text-xs whitespace-nowrap text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100">
+                        Remove Address
+                      </span>
                     </button>
                   </div>
                 )}
                 <div>
-                  <label htmlFor={`street-${idx}`} className="block text-sm font-medium text-gray-700">Street</label>
-                  <input type="text" id={`street-${idx}`} name="street" className="mt-1 block w-full px-4 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white/80 text-gray-900 text-base shadow-sm placeholder-gray-400" value={address.street} onChange={e => handleAddressChange(idx, e)} autoComplete="street-address" />
-                  {addressFieldErrors[idx]?.street && <p className="text-xs text-red-500 mt-1">{addressFieldErrors[idx].street}</p>}
+                  <label
+                    htmlFor={`street-${idx}`}
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Street
+                  </label>
+                  <input
+                    type="text"
+                    id={`street-${idx}`}
+                    name="street"
+                    className="mt-1 block w-full rounded-xl border border-gray-300 bg-white/80 px-4 py-2 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                    value={address.street}
+                    onChange={(e) => handleAddressChange(idx, e)}
+                    autoComplete="street-address"
+                  />
+                  {addressFieldErrors[idx]?.street && (
+                    <p className="mt-1 text-xs text-red-500">{addressFieldErrors[idx].street}</p>
+                  )}
                 </div>
                 <div>
-                  <label htmlFor={`city-${idx}`} className="block text-sm font-medium text-gray-700">City</label>
-                  <input type="text" id={`city-${idx}`} name="city" className="mt-1 block w-full px-4 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white/80 text-gray-900 text-base shadow-sm placeholder-gray-400" value={address.city} onChange={e => handleAddressChange(idx, e)} autoComplete="address-level2" />
-                  {addressFieldErrors[idx]?.city && <p className="text-xs text-red-500 mt-1">{addressFieldErrors[idx].city}</p>}
+                  <label
+                    htmlFor={`city-${idx}`}
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    id={`city-${idx}`}
+                    name="city"
+                    className="mt-1 block w-full rounded-xl border border-gray-300 bg-white/80 px-4 py-2 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                    value={address.city}
+                    onChange={(e) => handleAddressChange(idx, e)}
+                    autoComplete="address-level2"
+                  />
+                  {addressFieldErrors[idx]?.city && (
+                    <p className="mt-1 text-xs text-red-500">{addressFieldErrors[idx].city}</p>
+                  )}
                 </div>
                 <div>
-                  <label htmlFor={`state-${idx}`} className="block text-sm font-medium text-gray-700">State</label>
-                  <input type="text" id={`state-${idx}`} name="state" className="mt-1 block w-full px-4 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white/80 text-gray-900 text-base shadow-sm placeholder-gray-400" value={address.state} onChange={e => handleAddressChange(idx, e)} autoComplete="address-level1" />
-                  {addressFieldErrors[idx]?.state && <p className="text-xs text-red-500 mt-1">{addressFieldErrors[idx].state}</p>}
+                  <label
+                    htmlFor={`state-${idx}`}
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    id={`state-${idx}`}
+                    name="state"
+                    className="mt-1 block w-full rounded-xl border border-gray-300 bg-white/80 px-4 py-2 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                    value={address.state}
+                    onChange={(e) => handleAddressChange(idx, e)}
+                    autoComplete="address-level1"
+                  />
+                  {addressFieldErrors[idx]?.state && (
+                    <p className="mt-1 text-xs text-red-500">{addressFieldErrors[idx].state}</p>
+                  )}
                 </div>
                 <div>
-                  <label htmlFor={`zipCode-${idx}`} className="block text-sm font-medium text-gray-700">Zip Code</label>
-                  <input type="text" id={`zipCode-${idx}`} name="zipCode" className="mt-1 block w-full px-4 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white/80 text-gray-900 text-base shadow-sm placeholder-gray-400" value={address.zipCode} onChange={e => handleAddressChange(idx, e)} autoComplete="postal-code" maxLength={5} />
-                  {addressFieldErrors[idx]?.zipCode && <p className="text-xs text-red-500 mt-1">{addressFieldErrors[idx].zipCode}</p>}
+                  <label
+                    htmlFor={`zipCode-${idx}`}
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Zip Code
+                  </label>
+                  <input
+                    type="text"
+                    id={`zipCode-${idx}`}
+                    name="zipCode"
+                    className="mt-1 block w-full rounded-xl border border-gray-300 bg-white/80 px-4 py-2 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                    value={address.zipCode}
+                    onChange={(e) => handleAddressChange(idx, e)}
+                    autoComplete="postal-code"
+                    maxLength={5}
+                  />
+                  {addressFieldErrors[idx]?.zipCode && (
+                    <p className="mt-1 text-xs text-red-500">{addressFieldErrors[idx].zipCode}</p>
+                  )}
                 </div>
                 <div>
-                  <label htmlFor={`country-${idx}`} className="block text-sm font-medium text-gray-700">Country</label>
-                  <input type="text" id={`country-${idx}`} name="country" className="mt-1 block w-full px-4 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white/80 text-gray-900 text-base shadow-sm placeholder-gray-400" value={address.country} onChange={e => handleAddressChange(idx, e)} autoComplete="country" />
-                  {addressFieldErrors[idx]?.country && <p className="text-xs text-red-500 mt-1">{addressFieldErrors[idx].country}</p>}
+                  <label
+                    htmlFor={`country-${idx}`}
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Country
+                  </label>
+                  <input
+                    type="text"
+                    id={`country-${idx}`}
+                    name="country"
+                    className="mt-1 block w-full rounded-xl border border-gray-300 bg-white/80 px-4 py-2 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                    value={address.country}
+                    onChange={(e) => handleAddressChange(idx, e)}
+                    autoComplete="country"
+                  />
+                  {addressFieldErrors[idx]?.country && (
+                    <p className="mt-1 text-xs text-red-500">{addressFieldErrors[idx].country}</p>
+                  )}
                 </div>
               </div>
             ))}
 
             {success && (
-              <div className="mb-4 p-3 rounded bg-green-100 text-green-700 text-center font-semibold border border-green-300">{success}</div>
+              <div className="mb-4 rounded border border-green-300 bg-green-100 p-3 text-center font-semibold text-green-700">
+                {success}
+              </div>
             )}
             {error && (
-              <div className="mb-4 p-3 rounded bg-red-100 text-red-700 text-center font-semibold border border-red-300">{error}</div>
+              <div className="mb-4 rounded border border-red-300 bg-red-100 p-3 text-center font-semibold text-red-700">
+                {error}
+              </div>
             )}
-            <div className="flex justify-between mt-8">
+            <div className="mt-8 flex justify-between">
               <button
                 type="button"
                 onClick={() => router.push('/account')}
-                className="inline-flex justify-center py-2 px-6 rounded-full font-bold text-base bg-gray-200 text-gray-700 shadow hover:bg-gray-300 transition-all"
+                className="inline-flex justify-center rounded-full bg-gray-200 px-6 py-2 text-base font-bold text-gray-700 shadow transition-all hover:bg-gray-300"
               >
                 Back to Account
               </button>
               <button
                 type="submit"
-                className="inline-flex justify-center py-2 px-6 rounded-full font-bold text-base bg-gradient-to-r from-blue-500 to-pink-400 text-white shadow hover:from-blue-600 hover:to-pink-500 transition-all"
+                className="inline-flex justify-center rounded-full bg-gradient-to-r from-blue-500 to-pink-400 px-6 py-2 text-base font-bold text-white shadow transition-all hover:from-blue-600 hover:to-pink-500"
               >
                 Save Changes
               </button>
@@ -352,14 +494,27 @@ const AccountEditPage = () => {
         </div>
       </div>
       <style jsx global>{`
-        .animate-blob { animation: blob 7s infinite; }
-        @keyframes blob {
-          0%, 100% { transform: translateY(0px) scale(1); }
-          33% { transform: translateY(-20px) scale(1.05); }
-          66% { transform: translateY(10px) scale(0.97); }
+        .animate-blob {
+          animation: blob 7s infinite;
         }
-        .animation-delay-2000 { animation-delay: 2s; }
-        .animation-delay-4000 { animation-delay: 4s; }
+        @keyframes blob {
+          0%,
+          100% {
+            transform: translateY(0px) scale(1);
+          }
+          33% {
+            transform: translateY(-20px) scale(1.05);
+          }
+          66% {
+            transform: translateY(10px) scale(0.97);
+          }
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
       `}</style>
     </div>
   );

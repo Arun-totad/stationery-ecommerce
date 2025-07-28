@@ -108,4 +108,16 @@ export interface Transaction {
   status: 'pending' | 'completed' | 'failed';
   transactionDate: Date;
   details?: string; // Optional field for additional details
-} 
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'login' | 'order_placed' | 'order_status_update' | 'account_created' | string;
+  message: string;
+  createdAt: Date;
+  read: boolean;
+  data?: any; // Optional: for extra info (orderId, etc.)
+  link?: string; // Optional: link to navigate
+  linkLabel?: string; // Optional: label for the link
+}
