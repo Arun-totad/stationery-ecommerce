@@ -85,7 +85,7 @@ export default function Footer() {
           ))}
         </div>
         <p className="mt-10 text-center text-base font-bold text-white drop-shadow-sm">
-          &copy; {new Date().getFullYear()} Swift Stationery. All rights reserved.
+          &copy; {new Date().getFullYear()} Swift Marketplace. All rights reserved.
         </p>
       </div>
     </footer>

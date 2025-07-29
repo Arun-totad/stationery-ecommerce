@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
-import { doc, getDoc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, Timestamp, addDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { SupportTicket, Message, UserRole } from '@/types';
 import { toast } from 'react-hot-toast';
@@ -116,6 +116,22 @@ export default function AdminSupportTicketDetailPage() {
         updatedAt: Timestamp.now(),
       });
 
+      // Create notification for admin response
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          userId: ticket.userId, // Notify the ticket owner
+          type: 'support_admin_response',
+          message: `Admin has responded to your support ticket "${ticket.subject}".`,
+          createdAt: new Date(),
+          read: false,
+          data: { ticketId, ticketNumber: ticket.id },
+          link: `/account/support/${ticket.id}`,
+          linkLabel: ticket.id,
+        });
+      } catch (notifErr) {
+        console.error('Failed to create notification:', notifErr);
+      }
+
       setTicket((prevTicket) => {
         if (!prevTicket) return null;
         return {
@@ -142,6 +158,30 @@ export default function AdminSupportTicketDetailPage() {
         status: status,
         updatedAt: Timestamp.now(),
       });
+
+      // Create notification for status change
+      try {
+        const statusMessages = {
+          'open': 'opened',
+          'in-progress': 'marked as in progress',
+          'resolved': 'resolved',
+          'closed': 'closed'
+        };
+        
+        await addDoc(collection(db, 'notifications'), {
+          userId: ticket.userId, // Notify the ticket owner
+          type: 'support_status_update',
+          message: `Your support ticket "${ticket.subject}" has been ${statusMessages[status]}.`,
+          createdAt: new Date(),
+          read: false,
+          data: { ticketId, ticketNumber: ticket.id, newStatus: status },
+          link: `/account/support/${ticket.id}`,
+          linkLabel: ticket.id,
+        });
+      } catch (notifErr) {
+        console.error('Failed to create notification:', notifErr);
+      }
+
       setTicket((prevTicket) => {
         if (!prevTicket) return null;
         return {

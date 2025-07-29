@@ -32,6 +32,16 @@ export default function UserDetailPage() {
   const [pendingRole, setPendingRole] = useState<UserRole | null>(null);
   const [pendingAction, setPendingAction] = useState<string>('');
 
+  // Phone number formatting function
+  const formatPhoneForDisplay = (value: string) => {
+    if (!value) return 'N/A';
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    return value; // Return original if not 10 digits
+  };
+
   useEffect(() => {
     const fetchUserAndProducts = async () => {
       if (!userId) {
@@ -270,7 +280,7 @@ export default function UserDetailPage() {
                     <PhoneIcon className="h-4 w-4" /> Phone Number
                   </div>
                   <div className="font-semibold text-gray-900">
-                    {targetUser.phoneNumber || 'N/A'}
+                    {formatPhoneForDisplay(targetUser.phoneNumber || '')}
                   </div>
                 </div>
                 <div>

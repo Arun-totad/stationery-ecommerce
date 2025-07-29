@@ -35,6 +35,16 @@ export default function UserOrderDetailPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
+  // Phone number formatting function
+  const formatPhoneForDisplay = (value: string) => {
+    if (!value) return 'N/A';
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    return value; // Return original if not 10 digits
+  };
+
   useEffect(() => {
     const fetchOrder = async () => {
       if (!orderId || !user) return;
@@ -59,7 +69,7 @@ export default function UserOrderDetailPage() {
               const vendorSnap = await getDoc(vendorRef);
               if (vendorSnap.exists()) {
                 const vendorData = vendorSnap.data() as Vendor;
-                setVendorName(vendorData.shopName || vendorData.displayName || null);
+                setVendorName(vendorData.displayName || null);
               } else {
                 setVendorName(null);
               }
@@ -639,7 +649,7 @@ export default function UserOrderDetailPage() {
                 <path d="M22 16.92V19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-2.08a2 2 0 0 1 .84-1.63l8-5.33a2 2 0 0 1 2.32 0l8 5.33a2 2 0 0 1 .84 1.63z" />
               </svg>
               <span className="font-semibold text-green-700">
-                {order.shippingAddress?.phoneNumber || 'N/A'}
+                {formatPhoneForDisplay(order.shippingAddress?.phoneNumber || '')}
               </span>
             </div>
           </div>

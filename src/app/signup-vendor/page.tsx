@@ -10,7 +10,7 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 export default function VendorSignUpPage() {
   const router = useRouter();
   const { signUp } = useAuth();
-  const [shopName, setShopName] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -20,9 +20,33 @@ export default function VendorSignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Phone number formatting functions
+  const formatDisplayNumber = (number: string) => {
+    if (number.length === 10) {
+      return `(${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}`;
+    }
+    return number;
+  };
+
+  const formatPartialNumber = (number: string) => {
+    if (number.length === 0) return '';
+    if (number.length <= 3) return `(${number}`;
+    if (number.length <= 6) return `(${number.slice(0, 3)}) ${number.slice(3)}`;
+    return `(${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}`;
+  };
+
+  const formatPhoneForDisplay = (value: string) => {
+    if (!value) return '';
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return formatDisplayNumber(cleaned);
+    }
+    return formatPartialNumber(cleaned);
+  };
+
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
-    if (!shopName.trim()) newErrors.shopName = 'Shop Name is required';
+    if (!name.trim()) newErrors.name = 'Name is required';
     if (!email.trim()) newErrors.email = 'Email is required';
     else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) newErrors.email = 'Invalid email address';
     if (!password) newErrors.password = 'Password is required';
@@ -39,7 +63,7 @@ export default function VendorSignUpPage() {
     if (!validate()) return;
     setLoading(true);
     try {
-      await signUp(email, password, shopName, 'vendor', `+1${phone}`);
+      await signUp(email, password, name, 'vendor', phone);
       toast.success('Vendor account created successfully!');
       router.push('/');
     } catch (error: any) {
@@ -88,7 +112,7 @@ export default function VendorSignUpPage() {
             <rect x="28" y="28" width="8" height="16" rx="4" fill="#F472B6" />
           </svg>
           <span className="text-2xl font-extrabold tracking-tight text-gray-900">
-            Swift Stationery
+            International Swift Marketplace
           </span>
         </div>
         <div className="rounded-3xl bg-white/70 px-8 py-10 shadow-2xl backdrop-blur-lg">
@@ -105,24 +129,24 @@ export default function VendorSignUpPage() {
             </Link>
           </p>
           <form className="space-y-6" onSubmit={handleSubmit} autoComplete="off">
-            {/* Shop Name Field */}
+            {/* Name Field */}
             <div className="relative">
               <input
-                id="shopName"
+                id="name"
                 type="text"
-                value={shopName}
-                onChange={(e) => setShopName(e.target.value)}
-                className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.shopName ? 'border-red-400' : ''}`}
-                placeholder="Shop Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.name ? 'border-red-400' : ''}`}
+                placeholder="Name"
               />
               <label
-                htmlFor="shopName"
+                htmlFor="name"
                 className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
               >
-                Shop Name <span className="text-red-500">*</span>
+                Name <span className="text-red-500">*</span>
               </label>
-              {errors.shopName && (
-                <div className="animate-fade-in mt-1 text-xs text-red-500">{errors.shopName}</div>
+              {errors.name && (
+                <div className="animate-fade-in mt-1 text-xs text-red-500">{errors.name}</div>
               )}
             </div>
             {/* Email Field */}
@@ -218,16 +242,15 @@ export default function VendorSignUpPage() {
               <input
                 id="phone"
                 type="tel"
-                value={phone ? `+1${phone}` : ''}
+                value={formatPhoneForDisplay(phone)}
                 onChange={(e) => {
-                  let val = e.target.value.replace(/^\+1/, '');
-                  val = val.replace(/\D/g, '').slice(0, 10);
+                  let val = e.target.value.replace(/\D/g, '').slice(0, 10);
                   setPhone(val);
                 }}
                 className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.phone ? 'border-red-400' : ''}`}
-                placeholder="+11234567890"
-                maxLength={12}
-                pattern="\+1\d{10}"
+                placeholder="(123) 456-7890"
+                maxLength={14}
+                pattern="\(\d{3}\) \d{3}-\d{4}"
               />
               <label
                 htmlFor="phone"

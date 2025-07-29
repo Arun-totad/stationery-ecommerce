@@ -1,16 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import { db, storage } from '@/lib/firebase';
-import { collection, addDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, arrayUnion, getDocs, query, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { toast } from 'react-hot-toast';
-import { Product } from '@/types';
+import { Product, Category } from '@/types';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import VendorDashboardNav from '@/components/vendor/VendorDashboardNav';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,24 +38,62 @@ const validationSchema = Yup.object({
     .of(Yup.string())
     .min(0, 'At least one image is required')
     .max(5, 'Maximum 5 images allowed'),
+  isSecondHand: Yup.boolean(),
+  condition: Yup.string().when('isSecondHand', {
+    is: true,
+    then: (schema) => schema.required('Condition is required for second-hand items'),
+    otherwise: (schema) => schema.optional(),
+  }),
+  originalPrice: Yup.number().when('isSecondHand', {
+    is: true,
+    then: (schema) => schema.min(0, 'Original price must be positive'),
+    otherwise: (schema) => schema.optional(),
+  }),
 });
-
-const categories = [
-  'Notebooks',
-  'Pens & Pencils',
-  'Art Supplies',
-  'School Bags',
-  'Stationery Sets',
-  'Office Supplies',
-  'Educational Toys',
-  'Other',
-];
 
 export default function NewProductPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    if (!user) return;
+    
+    try {
+      setLoadingCategories(true);
+      // Fetch global categories
+      const globalQuery = query(collection(db, 'categories'), where('isGlobal', '==', true));
+      const globalSnapshot = await getDocs(globalQuery);
+      
+      // Fetch vendor-specific categories
+      const vendorQuery = query(collection(db, 'categories'), where('createdBy', '==', user.uid));
+      const vendorSnapshot = await getDocs(vendorQuery);
+      
+      const allCategories: Category[] = [];
+      
+      globalSnapshot.forEach((doc) => {
+        allCategories.push({ id: doc.id, ...doc.data() } as Category);
+      });
+      
+      vendorSnapshot.forEach((doc) => {
+        allCategories.push({ id: doc.id, ...doc.data() } as Category);
+      });
+      
+      setCategories(allCategories);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast.error('Failed to load categories');
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
 
   const formik = useFormik({
     initialValues: {
@@ -66,6 +104,9 @@ export default function NewProductPage() {
       category: '',
       brand: '',
       images: [] as string[],
+      isSecondHand: false,
+      condition: '',
+      originalPrice: '',
     },
     validationSchema,
     onSubmit: async (values) => {
@@ -81,6 +122,9 @@ export default function NewProductPage() {
           brand: values.brand,
           images: imageUrls,
           vendorId: user.uid,
+          isSecondHand: values.isSecondHand,
+          condition: values.isSecondHand ? values.condition : undefined,
+          originalPrice: values.isSecondHand && values.originalPrice ? Number(values.originalPrice) : undefined,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -133,44 +177,53 @@ export default function NewProductPage() {
     formik.setFieldValue('images', newUrls);
   };
 
+  const getIconComponent = (iconName: string) => {
+    const iconMap: { [key: string]: string } = {
+      'tag': '🏷️',
+      'laptop': '💻',
+      'couch': '🛋️',
+      'tshirt': '👕',
+      'book': '📚',
+      'basketball-ball': '🏀',
+      'home': '🏠',
+      'gamepad': '🎮',
+      'car': '🚗',
+    };
+    return iconMap[iconName] || '🏷️';
+  };
+
   return (
-    <>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50">
       <VendorDashboardNav />
-      <ProtectedRoute allowedRoles={['vendor']}>
-        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 py-10">
-          <AnimatePresence>
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 40 }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
-              className="mx-auto w-full max-w-3xl rounded-3xl border border-white/40 bg-white/70 p-8 px-4 text-gray-900 shadow-2xl backdrop-blur-lg sm:px-8"
-            >
-              <div className="mb-8 flex items-center gap-3">
-                <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 via-yellow-300 to-pink-400 shadow-md">
-                  <svg width="28" height="28" viewBox="0 0 64 64" fill="none">
-                    <rect x="8" y="8" width="48" height="48" rx="12" fill="#3B82F6" />
-                    <rect x="20" y="20" width="24" height="24" rx="6" fill="#FBBF24" />
-                    <rect x="28" y="28" width="8" height="16" rx="4" fill="#F472B6" />
-                  </svg>
-                </span>
-                <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
-                  Add New Product
-                </h1>
-              </div>
-              <form onSubmit={formik.handleSubmit} className="space-y-7">
-                {/* Product Name */}
+      
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Create New Product</h1>
+          <p className="mt-2 text-gray-600">Add a new product to your inventory</p>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl bg-white/80 p-8 shadow-xl backdrop-blur-sm"
+        >
+          <form onSubmit={formik.handleSubmit} className="space-y-8">
+            {/* Basic Information */}
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900">Basic Information</h2>
+              
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div className="relative">
                   <input
-                    type="text"
                     id="name"
+                    type="text"
                     {...formik.getFieldProps('name')}
                     className={`peer block w-full rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.name && formik.errors.name ? 'animate-shake border-red-400' : ''}`}
                     placeholder=" "
                   />
                   <label
                     htmlFor="name"
-                    className="absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
+                    className={`pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 ${!formik.values.name ? 'top-5 text-base' : 'top-2 text-sm'} peer-focus:top-2 peer-focus:text-sm`}
                   >
                     Product Name
                   </label>
@@ -184,296 +237,334 @@ export default function NewProductPage() {
                     </motion.p>
                   )}
                 </div>
-                {/* Description */}
+
                 <div className="relative">
-                  <textarea
-                    id="description"
-                    rows={4}
-                    {...formik.getFieldProps('description')}
-                    className={`peer block w-full resize-none rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.description && formik.errors.description ? 'animate-shake border-red-400' : ''}`}
+                  <input
+                    id="brand"
+                    type="text"
+                    {...formik.getFieldProps('brand')}
+                    className={`peer block w-full rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.brand && formik.errors.brand ? 'animate-shake border-red-400' : ''}`}
                     placeholder=" "
                   />
                   <label
-                    htmlFor="description"
-                    className="absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
+                    htmlFor="brand"
+                    className={`pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 ${!formik.values.brand ? 'top-5 text-base' : 'top-2 text-sm'} peer-focus:top-2 peer-focus:text-sm`}
                   >
-                    Description
+                    Brand
                   </label>
-                  {formik.touched.description && formik.errors.description && (
+                  {formik.touched.brand && formik.errors.brand && (
                     <motion.p
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       className="mt-1 text-xs text-red-600"
                     >
-                      {formik.errors.description}
+                      {formik.errors.brand}
                     </motion.p>
                   )}
                 </div>
-                {/* Price and Stock */}
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  <div className="relative">
-                    <input
-                      type="number"
-                      id="price"
-                      step="0.01"
-                      {...formik.getFieldProps('price')}
-                      className={`peer block w-full rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.price && formik.errors.price ? 'animate-shake border-red-400' : ''}`}
-                      placeholder=" "
-                    />
-                    <label
-                      htmlFor="price"
-                      className="absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
+              </div>
+
+              <div className="relative">
+                <textarea
+                  id="description"
+                  {...formik.getFieldProps('description')}
+                  rows={4}
+                  className={`peer block w-full rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.description && formik.errors.description ? 'animate-shake border-red-400' : ''}`}
+                  placeholder=" "
+                />
+                <label
+                  htmlFor="description"
+                  className={`pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 ${!formik.values.description ? 'top-5 text-base' : 'top-2 text-sm'} peer-focus:top-2 peer-focus:text-sm`}
+                >
+                  Description
+                </label>
+                {formik.touched.description && formik.errors.description && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="mt-1 text-xs text-red-600"
+                  >
+                    {formik.errors.description}
+                  </motion.p>
+                )}
+              </div>
+            </div>
+
+            {/* Category and Pricing */}
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900">Category & Pricing</h2>
+              
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div className="relative">
+                  <select
+                    id="category"
+                    {...formik.getFieldProps('category')}
+                    className={`peer block w-full appearance-none rounded-xl border border-gray-300 bg-white/80 px-4 py-4 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.category && formik.errors.category ? 'animate-shake border-red-400' : ''}`}
+                    disabled={loadingCategories}
+                    onChange={(e) => {
+                      if (e.target.value === 'add-new') {
+                        router.push('/vendor/categories');
+                        return;
+                      }
+                      formik.setFieldValue('category', e.target.value);
+                    }}
+                  >
+                    <option value="" disabled>
+                      {loadingCategories ? 'Loading categories...' : 'Select a category'}
+                    </option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.name}>
+                        {getIconComponent(category.icon)} {category.name}
+                      </option>
+                    ))}
+                    <option value="add-new" className="text-blue-600 font-medium">
+                      ➕ Add New Category
+                    </option>
+                  </select>
+                  <label
+                    htmlFor="category"
+                    className="pointer-events-none absolute -top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200"
+                  >
+                    Category
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => router.push('/vendor/categories')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg bg-blue-50 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-100 transition-colors"
+                  >
+                    Add
+                  </button>
+                  {formik.touched.category && formik.errors.category && (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="mt-1 text-xs text-red-600"
                     >
-                      Price ($)
-                    </label>
-                    {formik.touched.price && formik.errors.price && (
-                      <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="mt-1 text-xs text-red-600"
-                      >
-                        {formik.errors.price}
-                      </motion.p>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      id="stock"
-                      {...formik.getFieldProps('stock')}
-                      className={`peer block w-full rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.stock && formik.errors.stock ? 'animate-shake border-red-400' : ''}`}
-                      placeholder=" "
-                    />
-                    <label
-                      htmlFor="stock"
-                      className="absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
-                    >
-                      Stock Quantity
-                    </label>
-                    {formik.touched.stock && formik.errors.stock && (
-                      <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="mt-1 text-xs text-red-600"
-                      >
-                        {formik.errors.stock}
-                      </motion.p>
-                    )}
-                  </div>
+                      {formik.errors.category}
+                    </motion.p>
+                  )}
                 </div>
-                {/* Category and Brand */}
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+
+                <div className="relative">
+                  <input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    {...formik.getFieldProps('price')}
+                    className={`peer block w-full rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.price && formik.errors.price ? 'animate-shake border-red-400' : ''}`}
+                    placeholder=" "
+                  />
+                  <label
+                    htmlFor="price"
+                    className={`pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 ${!formik.values.price ? 'top-5 text-base' : 'top-2 text-sm'} peer-focus:top-2 peer-focus:text-sm`}
+                  >
+                    Price ($)
+                  </label>
+                  {formik.touched.price && formik.errors.price && (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="mt-1 text-xs text-red-600"
+                    >
+                      {formik.errors.price}
+                    </motion.p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div className="relative">
+                  <input
+                    id="stock"
+                    type="number"
+                    {...formik.getFieldProps('stock')}
+                    className={`peer block w-full rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.stock && formik.errors.stock ? 'animate-shake border-red-400' : ''}`}
+                    placeholder=" "
+                  />
+                  <label
+                    htmlFor="stock"
+                    className={`pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 ${!formik.values.stock ? 'top-5 text-base' : 'top-2 text-sm'} peer-focus:top-2 peer-focus:text-sm`}
+                  >
+                    Stock Quantity
+                  </label>
+                  {formik.touched.stock && formik.errors.stock && (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="mt-1 text-xs text-red-600"
+                    >
+                      {formik.errors.stock}
+                    </motion.p>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-4">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formik.values.isSecondHand}
+                      onChange={(e) => {
+                        formik.setFieldValue('isSecondHand', e.target.checked);
+                        if (!e.target.checked) {
+                          formik.setFieldValue('condition', '');
+                          formik.setFieldValue('originalPrice', '');
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="ml-2 text-sm font-medium text-gray-700">Second-hand Item</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Second-hand specific fields */}
+              {formik.values.isSecondHand && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="grid grid-cols-1 gap-6 sm:grid-cols-2"
+                >
                   <div className="relative">
                     <select
-                      id="category"
-                      {...formik.getFieldProps('category')}
-                      className={`peer block w-full appearance-none rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.category && formik.errors.category ? 'animate-shake border-red-400' : ''}`}
+                      id="condition"
+                      {...formik.getFieldProps('condition')}
+                      className={`peer block w-full appearance-none rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.condition && formik.errors.condition ? 'animate-shake border-red-400' : ''}`}
                     >
                       <option value="" disabled hidden>
-                        Select a category
+                        Select condition
                       </option>
-                      {categories.map((category) => (
-                        <option key={category} value={category}>
-                          {category}
-                        </option>
-                      ))}
+                      <option value="like-new">Like New</option>
+                      <option value="good">Good</option>
+                      <option value="fair">Fair</option>
+                      <option value="poor">Poor</option>
                     </select>
                     <label
-                      htmlFor="category"
-                      className={`pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 ${!formik.values.category ? 'peer-placeholder-shown:top-5 peer-placeholder-shown:text-base' : 'top-2 text-sm'} peer-focus:top-2 peer-focus:text-sm`}
+                      htmlFor="condition"
+                      className={`pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 ${!formik.values.condition ? 'top-5 text-base' : 'top-2 text-sm'} peer-focus:top-2 peer-focus:text-sm`}
                     >
-                      Category
+                      Condition
                     </label>
-                    {formik.touched.category && formik.errors.category && (
+                    {formik.touched.condition && formik.errors.condition && (
                       <motion.p
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         className="mt-1 text-xs text-red-600"
                       >
-                        {formik.errors.category}
+                        {formik.errors.condition}
                       </motion.p>
                     )}
                   </div>
+
                   <div className="relative">
                     <input
-                      type="text"
-                      id="brand"
-                      {...formik.getFieldProps('brand')}
-                      className={`peer block w-full rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.brand && formik.errors.brand ? 'animate-shake border-red-400' : ''}`}
+                      id="originalPrice"
+                      type="number"
+                      step="0.01"
+                      {...formik.getFieldProps('originalPrice')}
+                      className={`peer block w-full rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.originalPrice && formik.errors.originalPrice ? 'animate-shake border-red-400' : ''}`}
                       placeholder=" "
                     />
                     <label
-                      htmlFor="brand"
-                      className="absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
+                      htmlFor="originalPrice"
+                      className={`pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 ${!formik.values.originalPrice ? 'top-5 text-base' : 'top-2 text-sm'} peer-focus:top-2 peer-focus:text-sm`}
                     >
-                      Brand
+                      Original Price ($)
                     </label>
-                    {formik.touched.brand && formik.errors.brand && (
+                    {formik.touched.originalPrice && formik.errors.originalPrice && (
                       <motion.p
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         className="mt-1 text-xs text-red-600"
                       >
-                        {formik.errors.brand}
+                        {formik.errors.originalPrice}
                       </motion.p>
                     )}
                   </div>
-                </div>
-                {/* Product Images */}
-                <div>
-                  <label htmlFor="images" className="mb-2 block text-sm font-medium text-gray-700">
-                    Product Images
+                </motion.div>
+              )}
+            </div>
+
+            {/* Images */}
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900">Product Images</h2>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Upload Images (Max 5)
                   </label>
-                  <motion.div
-                    whileHover={{ scale: 1.02, borderColor: '#3B82F6' }}
-                    className="flex justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white/60 px-6 pt-5 pb-6 transition-all duration-200"
-                  >
-                    <div className="space-y-1 text-center">
-                      <svg
-                        className="mx-auto h-12 w-12 text-gray-400"
-                        stroke="currentColor"
-                        fill="none"
-                        viewBox="0 0 48 48"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L40 32"
-                          strokeWidth={2}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
+                  <span className="text-sm text-gray-500">
+                    {imageUrls.length}/5 images
+                  </span>
+                </div>
+                
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={uploading || imageUrls.length >= 5}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                
+                {uploading && (
+                  <div className="text-sm text-blue-600">Uploading images...</div>
+                )}
+                
+                {imageUrls.length > 0 && (
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
+                    {imageUrls.map((url, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={url}
+                          alt={`Product ${index + 1}`}
+                          className="h-24 w-full rounded-lg object-cover"
                         />
-                      </svg>
-                      <div className="flex items-center justify-center gap-2 text-sm text-gray-900">
-                        <label
-                          htmlFor="file-upload"
-                          className="relative cursor-pointer rounded-md bg-white px-2 py-1 font-medium text-blue-600 transition-all focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2 focus-within:outline-none hover:text-blue-500"
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 transition-opacity group-hover:opacity-100"
                         >
-                          <span>Upload images</span>
-                          <input
-                            id="file-upload"
-                            name="file-upload"
-                            type="file"
-                            multiple
-                            className="sr-only"
-                            onChange={handleImageUpload}
-                            accept="image/png, image/jpeg, image/gif"
-                          />
-                        </label>
-                        <span className="pl-1 text-gray-900">or drag and drop</span>
+                          <XMarkIcon className="h-4 w-4" />
+                        </button>
                       </div>
-                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5 images</p>
-                    </div>
-                  </motion.div>
-                  {formik.touched.images && formik.errors.images && (
-                    <motion.p
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="mt-1 text-xs text-red-600"
-                    >
-                      {formik.errors.images}
-                    </motion.p>
-                  )}
-                  <AnimatePresence>
-                    {imageUrls.length > 0 && (
-                      <motion.div
-                        initial="hidden"
-                        animate="visible"
-                        exit="hidden"
-                        variants={{
-                          hidden: { opacity: 0, y: 20 },
-                          visible: { opacity: 1, y: 0 },
-                        }}
-                        className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5"
-                      >
-                        {imageUrls.map((url, index) => (
-                          <motion.div
-                            key={index}
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            transition={{ duration: 0.2 }}
-                            className="group relative"
-                          >
-                            <img
-                              src={url}
-                              alt={`Product Image ${index + 1}`}
-                              className="h-24 w-full rounded-lg border border-gray-200 object-cover shadow"
-                            />
-                            <motion.button
-                              type="button"
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => removeImage(index)}
-                              className="absolute top-1 right-1 rounded-full bg-red-600 p-1 text-xs text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100"
-                            >
-                              <XMarkIcon className="h-4 w-4" />
-                            </motion.button>
-                          </motion.div>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-                {/* Action Buttons */}
-                <div className="pt-5">
-                  <div className="flex justify-end space-x-3">
-                    <motion.button
-                      type="button"
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => router.back()}
-                      className="rounded-xl border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 shadow transition-all hover:bg-gray-50 focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 focus:outline-none"
-                    >
-                      Cancel
-                    </motion.button>
-                    <motion.button
-                      type="submit"
-                      whileTap={{ scale: 0.97 }}
-                      disabled={formik.isSubmitting || uploading}
-                      className="relative ml-3 inline-flex justify-center overflow-hidden rounded-xl border border-transparent bg-blue-600 px-6 py-2 text-sm font-semibold text-white shadow-lg transition-all hover:bg-blue-700 focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {(formik.isSubmitting || uploading) && (
-                        <motion.span
-                          className="absolute top-1/2 left-4 -translate-y-1/2"
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                        >
-                          <svg
-                            className="h-5 w-5 animate-spin text-white"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8v8z"
-                            ></path>
-                          </svg>
-                        </motion.span>
-                      )}
-                      <span className="pr-2 pl-6 text-white">
-                        {formik.isSubmitting
-                          ? 'Creating...'
-                          : uploading
-                            ? 'Uploading...'
-                            : 'Create Product'}
-                      </span>
-                    </motion.button>
+                    ))}
                   </div>
-                </div>
-              </form>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </ProtectedRoute>
-    </>
+                )}
+                
+                {formik.touched.images && formik.errors.images && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-xs text-red-600"
+                  >
+                    {formik.errors.images}
+                  </motion.p>
+                )}
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-end space-x-4">
+              <button
+                type="button"
+                onClick={() => router.push('/vendor/products')}
+                className="rounded-xl border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={uploading}
+                className="rounded-xl bg-gradient-to-r from-blue-500 to-pink-500 px-6 py-3 text-sm font-medium text-white shadow-sm hover:from-blue-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                {uploading ? 'Creating...' : 'Create Product'}
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      </div>
+    </div>
   );
 }

@@ -12,26 +12,61 @@ import {
   DevicePhoneMobileIcon,
   EyeIcon,
   EyeSlashIcon,
+  BuildingStorefrontIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { motion, AnimatePresence } from 'framer-motion';
+
+type UserType = 'customer' | 'vendor';
 
 export default function SignUpPage() {
   const router = useRouter();
   const { signUp } = useAuth();
-  // Only customer sign up
+  const [userType, setUserType] = useState<UserType>('customer');
+  
+  // Form state
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [phone, setPhone] = useState('');
+  
+  // UI state
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Phone number formatting functions
+  const formatDisplayNumber = (number: string) => {
+    if (number.length === 10) {
+      return `(${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}`;
+    }
+    return number;
+  };
+
+  const formatPartialNumber = (number: string) => {
+    if (number.length === 0) return '';
+    if (number.length <= 3) return `(${number}`;
+    if (number.length <= 6) return `(${number.slice(0, 3)}) ${number.slice(3)}`;
+    return `(${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}`;
+  };
+
+  const formatPhoneForDisplay = (value: string) => {
+    if (!value) return '';
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return formatDisplayNumber(cleaned);
+    }
+    return formatPartialNumber(cleaned);
+  };
+
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
+    
+    // Common validations
     if (!fullName.trim()) newErrors.fullName = 'Full Name is required';
     if (!email.trim()) newErrors.email = 'Email is required';
     else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) newErrors.email = 'Invalid email address';
@@ -40,6 +75,7 @@ export default function SignUpPage() {
     if (!confirmPassword) newErrors.confirmPassword = 'Please confirm your password';
     else if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
     if (!phone.trim() || phone.length !== 10) newErrors.phone = 'Phone number must be 10 digits';
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -49,7 +85,8 @@ export default function SignUpPage() {
     if (!validate()) return;
     setLoading(true);
     try {
-      await signUp(email, password, fullName, 'customer', `+91${phone}`);
+      await signUp(email, password, fullName, userType, phone);
+      
       // Add notification to update address
       try {
         const user = JSON.parse(JSON.stringify(window.localStorage.getItem('firebase:authUser'))) || null;
@@ -58,18 +95,21 @@ export default function SignUpPage() {
           await addDoc(collection(db, 'notifications'), {
             userId,
             type: 'account_created',
-            message: 'Welcome! Please update your address to complete your profile.',
+            message: userType === 'vendor' 
+              ? 'Welcome! Please complete your shop profile to start selling.'
+              : 'Welcome! Please update your address to complete your profile.',
             createdAt: new Date(),
             read: false,
-            link: '/account/edit',
-            linkLabel: 'Update Address',
+            link: userType === 'vendor' ? '/vendor' : '/account/edit',
+            linkLabel: userType === 'vendor' ? 'Complete Profile' : 'Update Address',
           });
         }
       } catch (notifErr) {
         console.error('Failed to create welcome notification:', notifErr);
       }
-      toast.success('Account created successfully!');
-      router.push('/');
+      
+      toast.success(`${userType === 'vendor' ? 'Vendor' : 'Customer'} account created successfully!`);
+      router.push(userType === 'vendor' ? '/vendor' : '/');
     } catch (error: any) {
       let message = 'Failed to create account';
       if (error && typeof error === 'object' && 'code' in error) {
@@ -93,6 +133,15 @@ export default function SignUpPage() {
     }
   };
 
+  const clearForm = () => {
+    setFullName('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setPhone('');
+    setErrors({});
+  };
+
   useEffect(() => {
     document.body.style.background =
       'linear-gradient(135deg, #e0e7ff 0%, #fce7f3 50%, #fef9c3 100%)';
@@ -104,9 +153,10 @@ export default function SignUpPage() {
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-blue-200 via-pink-100 to-yellow-100">
       {/* Animated Blobs */}
-      <div className="animate-blob absolute -top-32 -left-32 z-0 h-96 w-96 rounded-full bg-pink-200 opacity-40 blur-3xl filter" />
-      <div className="animate-blob animation-delay-2000 absolute -right-32 -bottom-32 z-0 h-96 w-96 rounded-full bg-blue-200 opacity-40 blur-3xl filter" />
-      <div className="animate-blob animation-delay-4000 absolute top-1/2 left-1/2 z-0 h-72 w-72 rounded-full bg-yellow-100 opacity-30 blur-2xl filter" />
+      <div className="absolute -top-32 -left-32 z-0 h-96 w-96 rounded-full bg-pink-200 opacity-40 blur-3xl filter" />
+      <div className="absolute -right-32 -bottom-32 z-0 h-96 w-96 rounded-full bg-blue-200 opacity-40 blur-3xl filter" />
+      <div className="absolute top-1/2 left-1/2 z-0 h-72 w-72 rounded-full bg-yellow-100 opacity-30 blur-2xl filter" />
+      
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-6 flex flex-col items-center">
           {/* Stationery SVG Illustration (placeholder) */}
@@ -116,9 +166,10 @@ export default function SignUpPage() {
             <rect x="28" y="28" width="8" height="16" rx="4" fill="#F472B6" />
           </svg>
           <span className="text-2xl font-extrabold tracking-tight text-gray-900">
-            Swift Stationery
+            International Swift Marketplace
           </span>
         </div>
+        
         <div className="rounded-3xl bg-white/70 px-8 py-10 shadow-2xl backdrop-blur-lg">
           <h2 className="mb-2 text-center text-3xl font-extrabold text-gray-900">
             Create your account
@@ -132,165 +183,218 @@ export default function SignUpPage() {
               sign in to your existing account
             </Link>
           </p>
-          <form className="space-y-6" onSubmit={handleSubmit} autoComplete="off">
-            {/* Name Field */}
-            <div className="relative">
-              <input
-                id="name"
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.fullName ? 'border-red-400' : ''}`}
-                placeholder="Full Name"
-              />
-              <label
-                htmlFor="name"
-                className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
-              >
-                Full Name <span className="text-red-500">*</span>
-              </label>
-              {errors.fullName && (
-                <div className="animate-fade-in mt-1 text-xs text-red-500">{errors.fullName}</div>
-              )}
-            </div>
-            {/* Email Field */}
-            <div className="relative">
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.email ? 'border-red-400' : ''}`}
-                placeholder="Email address"
-              />
-              <label
-                htmlFor="email"
-                className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
-              >
-                Email address <span className="text-red-500">*</span>
-              </label>
-              {errors.email && (
-                <div className="animate-fade-in mt-1 text-xs text-red-500">{errors.email}</div>
-              )}
-            </div>
-            {/* Password Field */}
-            <div className="relative">
-              <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.password ? 'border-red-400' : ''}`}
-                placeholder="Password"
-              />
-              <label
-                htmlFor="password"
-                className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
-              >
-                Password <span className="text-red-500">*</span>
-              </label>
-              <button
-                type="button"
-                tabIndex={-1}
-                className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 hover:text-blue-500 focus:outline-none"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? (
-                  <EyeSlashIcon className="h-5 w-5" />
-                ) : (
-                  <EyeIcon className="h-5 w-5" />
-                )}
-              </button>
-              {/* Password strength meter */}
-              {password && (
-                <div className="mt-2 h-2 w-full rounded bg-gray-200">
-                  <div
-                    className={`h-2 rounded transition-all duration-300 ${
-                      password.length >= 10
-                        ? 'w-full bg-green-500'
-                        : password.length >= 6
-                          ? 'w-2/3 bg-yellow-400'
-                          : 'w-1/3 bg-red-500'
-                    }`}
-                  />
-                </div>
-              )}
-              {errors.password && (
-                <div className="animate-fade-in mt-1 text-xs text-red-500">{errors.password}</div>
-              )}
-            </div>
-            {/* Confirm Password Field */}
-            <div className="relative">
-              <input
-                id="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.confirmPassword ? 'border-red-400' : ''}`}
-                placeholder="Confirm Password"
-              />
-              <label
-                htmlFor="confirmPassword"
-                className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
-              >
-                Confirm Password <span className="text-red-500">*</span>
-              </label>
-              <button
-                type="button"
-                tabIndex={-1}
-                className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 hover:text-blue-500 focus:outline-none"
-                onClick={() => setShowConfirmPassword((v) => !v)}
-                aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-              >
-                {showConfirmPassword ? (
-                  <EyeSlashIcon className="h-5 w-5" />
-                ) : (
-                  <EyeIcon className="h-5 w-5" />
-                )}
-              </button>
-              {errors.confirmPassword && (
-                <div className="animate-fade-in mt-1 text-xs text-red-500">
-                  {errors.confirmPassword}
-                </div>
-              )}
-            </div>
-            {/* Phone Field */}
-            <div className="relative">
-              <input
-                id="phone"
-                type="tel"
-                value={phone ? `+1${phone}` : ''}
-                onChange={(e) => {
-                  let val = e.target.value.replace(/^\+1/, '');
-                  val = val.replace(/\D/g, '').slice(0, 10);
-                  setPhone(val);
-                }}
-                className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.phone ? 'border-red-400' : ''}`}
-                placeholder="+11234567890"
-                maxLength={12}
-                pattern="\+1\d{10}"
-              />
-              <label
-                htmlFor="phone"
-                className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
-              >
-                Phone Number <span className="text-red-500">*</span>
-              </label>
-              {errors.phone && (
-                <div className="animate-fade-in mt-1 text-xs text-red-500">{errors.phone}</div>
-              )}
-            </div>
+
+          {/* User Type Toggle */}
+          <div className="mb-6 flex rounded-xl border border-gray-200 bg-white/50 p-1 shadow-sm">
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-pink-500 px-4 py-3 text-lg font-bold text-white shadow-lg transition-all duration-200 hover:from-blue-600 hover:to-pink-600 focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:outline-none active:scale-95"
+              type="button"
+              onClick={() => {
+                setUserType('customer');
+                clearForm();
+              }}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                userType === 'customer'
+                  ? 'bg-gradient-to-r from-blue-500 to-pink-400 text-white shadow-md'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
             >
-              {loading ? 'Creating account...' : 'Create account'}
+              <UserGroupIcon className="h-4 w-4" />
+              Customer
             </button>
-          </form>
+            <button
+              type="button"
+              onClick={() => {
+                setUserType('vendor');
+                clearForm();
+              }}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                userType === 'vendor'
+                  ? 'bg-gradient-to-r from-blue-500 to-pink-400 text-white shadow-md'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <BuildingStorefrontIcon className="h-4 w-4" />
+              Vendor
+            </button>
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.form
+              key={userType}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+              onSubmit={handleSubmit}
+              autoComplete="off"
+            >
+              {/* Name Field */}
+              <div className="relative">
+                <input
+                  id="name"
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.fullName ? 'border-red-400' : ''}`}
+                  placeholder="Full Name"
+                />
+                <label
+                  htmlFor="name"
+                  className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
+                >
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                {errors.fullName && (
+                  <div className="mt-1 text-xs text-red-500">
+                    {errors.fullName}
+                  </div>
+                )}
+              </div>
+
+              {/* Email Field */}
+              <div className="relative">
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.email ? 'border-red-400' : ''}`}
+                  placeholder="Email address"
+                />
+                <label
+                  htmlFor="email"
+                  className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
+                >
+                  Email address <span className="text-red-500">*</span>
+                </label>
+                {errors.email && (
+                  <div className="mt-1 text-xs text-red-500">{errors.email}</div>
+                )}
+              </div>
+
+              {/* Password Field */}
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.password ? 'border-red-400' : ''}`}
+                  placeholder="Password"
+                />
+                <label
+                  htmlFor="password"
+                  className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
+                >
+                  Password <span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 hover:text-blue-500 focus:outline-none"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <EyeSlashIcon className="h-5 w-5" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5" />
+                  )}
+                </button>
+                {/* Password strength meter */}
+                {password && (
+                  <div className="mt-2 h-2 w-full rounded bg-gray-200">
+                    <div
+                      className={`h-2 rounded transition-all duration-300 ${
+                        password.length >= 10
+                          ? 'w-full bg-green-500'
+                          : password.length >= 6
+                            ? 'w-2/3 bg-yellow-400'
+                            : 'w-1/3 bg-red-500'
+                      }`}
+                    />
+                  </div>
+                )}
+                {errors.password && (
+                  <div className="mt-1 text-xs text-red-500">{errors.password}</div>
+                )}
+              </div>
+
+              {/* Confirm Password Field */}
+              <div className="relative">
+                <input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.confirmPassword ? 'border-red-400' : ''}`}
+                  placeholder="Confirm Password"
+                />
+                <label
+                  htmlFor="confirmPassword"
+                  className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
+                >
+                  Confirm Password <span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 hover:text-blue-500 focus:outline-none"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? (
+                    <EyeSlashIcon className="h-5 w-5" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5" />
+                  )}
+                </button>
+                {errors.confirmPassword && (
+                  <div className="mt-1 text-xs text-red-500">
+                    {errors.confirmPassword}
+                  </div>
+                )}
+              </div>
+
+              {/* Phone Field */}
+              <div className="relative">
+                <input
+                  id="phone"
+                  type="tel"
+                  value={formatPhoneForDisplay(phone)}
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setPhone(val);
+                  }}
+                  className={`peer block w-full rounded-xl border border-gray-300 bg-transparent px-4 pt-6 pb-2 text-gray-900 placeholder-transparent transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none ${errors.phone ? 'border-red-400' : ''}`}
+                  placeholder="(123) 456-7890"
+                  maxLength={14}
+                  pattern="\(\d{3}\) \d{3}-\d{4}"
+                />
+                <label
+                  htmlFor="phone"
+                  className="pointer-events-none absolute top-2 left-4 text-sm text-gray-500 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm"
+                >
+                  Phone Number <span className="text-red-500">*</span>
+                </label>
+                {errors.phone && (
+                  <div className="mt-1 text-xs text-red-500">{errors.phone}</div>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-pink-500 px-4 py-3 text-lg font-bold text-white shadow-lg transition-all duration-200 hover:from-blue-600 hover:to-pink-600 focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:outline-none active:scale-95"
+              >
+                {loading ? 'Creating account...' : `Create ${userType === 'vendor' ? 'Vendor' : 'Customer'} Account`}
+              </button>
+            </motion.form>
+          </AnimatePresence>
         </div>
       </div>
+      
       {/* Animate.css keyframes for blobs */}
       <style jsx global>{`
         @keyframes blob {

@@ -80,13 +80,13 @@ export default function ProductsPage() {
     }
   }, []);
 
-  // Filter vendors by search (shop name, vendor name, location)
+  // Filter vendors by search (vendor name, location)
   const filteredVendors = vendors.filter((vendor) => {
-    const shopName = (vendor.shopName || '').toLowerCase();
-    const vendorName = (vendor.displayName || '').toLowerCase();
-    const location = (vendor.shopAddress || '').toLowerCase();
     const search = vendorSearch.toLowerCase();
-    return shopName.includes(search) || vendorName.includes(search) || location.includes(search);
+    const vendorName = (vendor.displayName || '').toLowerCase();
+    const location = (vendor.addresses?.[0]?.city || '').toLowerCase();
+    
+    return vendorName.includes(search) || location.includes(search);
   });
   // Filter products by selected vendor and search
   const vendorProducts = selectedVendor
@@ -173,19 +173,17 @@ export default function ProductsPage() {
                     {vendor.image ? (
                       <img
                         src={vendor.image}
-                        alt={vendor.shopName || vendor.displayName}
-                        className="mb-2 h-14 w-14 rounded-full object-cover shadow"
+                        alt={vendor.displayName}
+                        className="h-12 w-12 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-300 via-purple-300 to-pink-300 shadow">
-                        <span className="text-2xl font-bold text-white drop-shadow">
-                          {getInitials(vendor.shopName || vendor.displayName)}
-                        </span>
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-lg">
+                        {getInitials(vendor.displayName)}
                       </div>
                     )}
-                    <span className="mb-1 w-full truncate text-center text-lg font-semibold text-gray-900">
-                      {vendor.shopName || vendor.displayName}
-                    </span>
+                    <div className="text-center">
+                      <h3 className="text-lg font-semibold text-gray-900">{vendor.displayName}</h3>
+                    </div>
                     <span className="mb-1 flex w-full items-center justify-center gap-1 truncate text-center text-xs text-gray-700">
                       <FaInfoCircle className="inline" /> {vendor.displayName}
                     </span>

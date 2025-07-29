@@ -9,9 +9,9 @@ import { Toaster } from 'react-hot-toast';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Swift Stationery - Your One-Stop Stationery Shop',
+  title: 'International Swift Marketplace - Your One-Stop Global Marketplace',
   description:
-    'Your ultimate destination for all your stationery needs. Shop for pens, notebooks, art supplies, and more!',
+    'Your ultimate destination for a diverse range of products from around the world. Shop for stationery, art supplies, office essentials, and unique global finds!'
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -64,11 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: data.role,
             createdAt: createdAtDate,
             updatedAt: updatedAtDate,
-            ...(data.role === 'vendor' && {
-              shopName: (data as any).shopName || '',
-              isVerified: (data as any).isVerified || false,
-              products: (data as any).products || [],
-            }),
+            ...(data.role === 'vendor' && { isVerified: (data as any).isVerified || false, products: (data as any).products || [] }),
           } as User;
           setUser(updatedUser);
           setUserRole(data.role);
@@ -170,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         userNumber, // Store persistent user number
         createdAt: new Date(),
         updatedAt: new Date(),
-        ...(role === 'vendor' && { shopName: name, isVerified: false, products: [] }),
+        ...(role === 'vendor' && { isVerified: false, products: [] }),
       });
       await refreshUserData();
     } catch (error) {

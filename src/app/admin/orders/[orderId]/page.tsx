@@ -37,6 +37,16 @@ export default function OrderDetailPage() {
     { id: string; ticketNumber?: string; subject?: string }[]
   >([]);
 
+  // Phone number formatting function
+  const formatPhoneForDisplay = (value: string) => {
+    if (!value) return 'N/A';
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    return value; // Return original if not 10 digits
+  };
+
   useEffect(() => {
     if (!orderId) {
       setLoading(false);
@@ -414,25 +424,19 @@ export default function OrderDetailPage() {
               </h2>
               <div className="grid grid-cols-1 gap-x-10 gap-y-6 md:grid-cols-2">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Shop Name</p>
-                  <span className="mt-1 block text-lg font-semibold text-gray-900">
-                    {(vendor as any)?.shopName || vendor?.displayName || 'N/A'}
-                  </span>
+                  <p className="text-sm font-medium text-gray-500">Vendor Name</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {vendor?.displayName || 'N/A'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Vendor Email</p>
                   <span className="mt-1 block text-lg text-gray-900">{vendor?.email || 'N/A'}</span>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Vendor Name</p>
-                  <span className="mt-1 block text-lg text-gray-900">
-                    {vendor?.displayName || 'N/A'}
-                  </span>
-                </div>
-                <div>
                   <p className="text-sm font-medium text-gray-500">Phone</p>
                   <span className="mt-1 block text-lg text-gray-900">
-                    {vendor?.phoneNumber || 'N/A'}
+                    {formatPhoneForDisplay(vendor?.phoneNumber || '')}
                   </span>
                 </div>
                 <div className="md:col-span-2">
@@ -488,7 +492,7 @@ export default function OrderDetailPage() {
                       <p className="mb-1 text-sm font-medium text-blue-700">{customer.email}</p>
                       {customer.phoneNumber && (
                         <span className="mb-2 inline-block rounded bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-800">
-                          {customer.phoneNumber}
+                          {formatPhoneForDisplay(customer.phoneNumber)}
                         </span>
                       )}
                     </>
@@ -505,7 +509,7 @@ export default function OrderDetailPage() {
                   {order.shippingAddress.phoneNumber && (
                     <div className="mt-2 text-sm text-gray-600">
                       Phone:{' '}
-                      <span className="font-semibold">{order.shippingAddress.phoneNumber}</span>
+                      <span className="font-semibold">{formatPhoneForDisplay(order.shippingAddress.phoneNumber)}</span>
                     </div>
                   )}
                 </div>

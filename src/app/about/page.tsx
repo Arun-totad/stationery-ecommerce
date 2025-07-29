@@ -17,32 +17,32 @@ export default function AboutPage() {
         <h1 className="mb-2 text-center text-4xl font-extrabold tracking-tight text-gray-900 drop-shadow-sm md:text-5xl">
           About{' '}
           <span className="bg-gradient-to-r from-blue-500 to-pink-400 bg-clip-text text-transparent">
-            Swift Stationery
+            International Swift Marketplace
           </span>
         </h1>
         <p className="mb-8 text-center text-lg font-medium text-gray-600 md:text-xl">
-          Your one-stop shop for all your stationery needs.
+          Your one-stop global marketplace for all your needs.
         </p>
         <div className="space-y-6 text-center text-lg leading-relaxed text-gray-700 md:text-xl">
           <p>
-            Welcome to <span className="font-semibold text-blue-600">Swift Stationery</span>, where
-            quality meets creativity! We are passionate about providing the best stationery products
-            to inspire your work, studies, and artistic endeavors. Our mission is to offer a wide
-            range of high-quality, eco-friendly, and innovative stationery items that cater to
-            students, professionals, and artists alike.
+            Welcome to <span className="font-semibold text-blue-600">International Swift Marketplace</span>, where
+            quality meets diversity! We are passionate about providing the best products from around the world
+            to inspire your work, studies, creativity, and daily life. Our mission is to offer a wide
+            range of high-quality, eco-friendly, and innovative items that cater to
+            students, professionals, artists, and families alike.
           </p>
           <p>
-            Founded in <span className="font-semibold text-pink-500">[Year]</span>, Swift Stationery
-            started with a simple idea: to make premium stationery accessible to everyone. We
-            believe that the right tools can make a significant difference in productivity and
-            expression. That's why we meticulously select our products, ensuring they meet the
+            Founded in <span className="font-semibold text-pink-500">[Year]</span>, International Swift Marketplace
+            started with a simple idea: to make premium products accessible to everyone, everywhere. We
+            believe that the right tools and goods can make a significant difference in productivity and
+            expression. That's why we meticulously select our offerings, ensuring they meet the
             highest standards of durability, functionality, and design.
           </p>
           <p>
-            From elegant pens and notebooks to vibrant art supplies and office essentials, we have
+            From elegant pens and notebooks to vibrant art supplies, office essentials, and unique global finds, we have
             everything you need to bring your ideas to life. Thank you for choosing{' '}
-            <span className="font-semibold text-blue-600">Swift Stationery</span>. We look forward
-            to being a part of your creative journey!
+            <span className="font-semibold text-blue-600">International Swift Marketplace</span>. We look forward
+            to being a part of your journey!
           </p>
         </div>
       </div>

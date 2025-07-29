@@ -106,6 +106,23 @@ export default function NewSupportTicketPage() {
         ],
         ticketNumber: ticketId,
       });
+
+      // Create notification for ticket creation
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          userId: user.uid,
+          type: 'support_ticket_created',
+          message: `Support ticket "${subject}" has been created successfully.`,
+          createdAt: new Date(),
+          read: false,
+          data: { ticketId, ticketNumber: ticketId },
+          link: `/account/support/${ticketId}`,
+          linkLabel: ticketId,
+        });
+      } catch (notifErr) {
+        console.error('Failed to create notification:', notifErr);
+      }
+
       toast.success('Support ticket created!');
       router.push('/account/support');
     } catch (error) {

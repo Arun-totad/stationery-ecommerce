@@ -12,22 +12,35 @@ export interface Address {
 export interface User {
   uid: string;
   email: string;
-  role: UserRole;
   displayName: string;
-  phoneNumber?: string | null;
-  addresses?: Address[];
+  phoneNumber?: string;
+  photoURL?: string; // Profile photo URL
+  addresses: Address[];
+  role: UserRole;
+  userNumber: string;
   createdAt: Date;
   updatedAt: Date;
-  photoURL?: string | null; // Optional avatar for user
 }
 
 export interface Vendor extends User {
-  shopName: string;
   shopAddress: string;
   isVerified: boolean;
   products: string[]; // Array of product IDs
   description?: string; // Short description or tagline
   image?: string; // Logo or avatar URL
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  description: string;
+  icon: string; // Icon name or SVG path
+  color: string; // Hex color for category styling
+  createdBy: string; // Vendor ID who created it
+  isGlobal: boolean; // Whether it's a global category or vendor-specific
+  createdAt: Date;
+  updatedAt: Date;
+  productCount: number; // Number of products in this category
 }
 
 export interface Product {
@@ -40,6 +53,9 @@ export interface Product {
   brand: string;
   images: string[];
   vendorId: string;
+  condition?: 'new' | 'like-new' | 'good' | 'fair' | 'poor'; // For second-hand items
+  isSecondHand?: boolean; // Whether this is a second-hand item
+  originalPrice?: number; // Original price for second-hand items
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,6 +83,7 @@ export interface Order {
   shippingAddress: Address;
   paymentStatus: 'pending' | 'completed' | 'failed';
   paymentMethod: string;
+  deliveryOption?: 'delivery' | 'pickup';
   phoneNumber?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -113,11 +130,11 @@ export interface Transaction {
 export interface Notification {
   id: string;
   userId: string;
-  type: 'login' | 'order_placed' | 'order_status_update' | 'account_created' | string;
+  type: 'login' | 'order_placed' | 'order_status_update' | 'account_created' | 'support_ticket_created' | 'support_message' | 'support_admin_response' | 'support_status_update' | 'support_ticket_reopened' | 'support_ticket_closed' | string;
   message: string;
   createdAt: Date;
   read: boolean;
-  data?: any; // Optional: for extra info (orderId, etc.)
+  data?: any; // Optional: for extra info (orderId, ticketId, etc.)
   link?: string; // Optional: link to navigate
   linkLabel?: string; // Optional: label for the link
 }

@@ -78,9 +78,9 @@ export default function LoginPage() {
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-blue-200 via-pink-100 to-yellow-100">
       {/* Animated Blobs */}
-      <div className="animate-blob absolute -top-32 -left-32 z-0 h-96 w-96 rounded-full bg-pink-200 opacity-40 blur-3xl filter" />
-      <div className="animate-blob animation-delay-2000 absolute -right-32 -bottom-32 z-0 h-96 w-96 rounded-full bg-blue-200 opacity-40 blur-3xl filter" />
-      <div className="animate-blob animation-delay-4000 absolute top-1/2 left-1/2 z-0 h-72 w-72 rounded-full bg-yellow-100 opacity-30 blur-2xl filter" />
+      <div className="absolute -top-32 -left-32 z-0 h-96 w-96 rounded-full bg-pink-200 opacity-40 blur-3xl filter" />
+      <div className="absolute -right-32 -bottom-32 z-0 h-96 w-96 rounded-full bg-blue-200 opacity-40 blur-3xl filter" />
+      <div className="absolute top-1/2 left-1/2 z-0 h-72 w-72 rounded-full bg-yellow-100 opacity-30 blur-2xl filter" />
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-6 flex flex-col items-center">
           {/* Stationery SVG Illustration (placeholder) */}
@@ -90,7 +90,7 @@ export default function LoginPage() {
             <rect x="28" y="28" width="8" height="16" rx="4" fill="#F472B6" />
           </svg>
           <span className="text-2xl font-extrabold tracking-tight text-gray-900">
-            Swift Stationery
+            International Swift Marketplace
           </span>
         </div>
         {/* Glassmorphism Card (no gradient border) */}
@@ -126,7 +126,7 @@ export default function LoginPage() {
                   Email address
                 </label>
                 {formik.touched.email && formik.errors.email && (
-                  <div className="animate-fade-in mt-1 text-xs text-red-500">
+                  <div className="mt-1 text-xs text-red-500">
                     {formik.errors.email}
                   </div>
                 )}
@@ -161,7 +161,7 @@ export default function LoginPage() {
                   )}
                 </button>
                 {formik.touched.password && formik.errors.password && (
-                  <div className="animate-fade-in mt-1 text-xs text-red-500">
+                  <div className="mt-1 text-xs text-red-500">
                     {formik.errors.password}
                   </div>
                 )}

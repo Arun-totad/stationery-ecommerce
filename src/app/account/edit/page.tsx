@@ -46,6 +46,74 @@ const AccountEditPage = () => {
     },
   ]);
 
+  // Phone number formatter for display only
+  const formatPhoneNumberForDisplay = (value: string) => {
+    if (!value) return '';
+    
+    // Remove all non-digits
+    const cleaned = value.replace(/\D/g, '');
+    
+    // If it starts with 91 (old India format), convert to US format
+    if (cleaned.startsWith('91') && cleaned.length >= 12) {
+      const usNumber = cleaned.slice(2, 12);
+      return formatDisplayNumber(usNumber);
+    }
+    
+    // If it starts with 1 and has 11 digits, remove the leading 1
+    if (cleaned.startsWith('1') && cleaned.length === 11) {
+      const usNumber = cleaned.slice(1);
+      return formatDisplayNumber(usNumber);
+    }
+    
+    // If it has 10 digits, format it
+    if (cleaned.length === 10) {
+      return formatDisplayNumber(cleaned);
+    }
+    
+    // For partial numbers, format what we have
+    return formatPartialNumber(cleaned);
+  };
+
+  // Format complete 10-digit number for display
+  const formatDisplayNumber = (number: string) => {
+    if (number.length === 10) {
+      return `(${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}`;
+    }
+    return number;
+  };
+
+  // Format partial number for display
+  const formatPartialNumber = (number: string) => {
+    if (number.length === 0) return '';
+    if (number.length <= 3) return `(${number}`;
+    if (number.length <= 6) return `(${number.slice(0, 3)}) ${number.slice(3)}`;
+    return `(${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}`;
+  };
+
+  // Phone number validation
+  const validatePhoneNumber = (value: string): boolean => {
+    if (!value) return false;
+    
+    // Remove all non-digits
+    const cleaned = value.replace(/\D/g, '');
+    
+    // Must be exactly 10 digits for US numbers
+    return cleaned.length === 10;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    
+    // Remove all non-digits for storage
+    let cleaned = value.replace(/\D/g, '');
+    
+    // Limit to 10 digits
+    cleaned = cleaned.slice(0, 10);
+    
+    // Store only the digits
+    setFormData(prev => ({ ...prev, phoneNumber: cleaned }));
+  };
+
   useEffect(() => {
     const fetchUserData = async () => {
       if (authLoading) return; // Wait for auth to finish loading
@@ -57,7 +125,7 @@ const AccountEditPage = () => {
             const userData = userDocSnap.data() as User;
             setFormData({
               ...userData,
-              phoneNumber: userData.phoneNumber || null,
+              phoneNumber: formatPhoneNumberForDisplay(userData.phoneNumber || ''),
               addresses:
                 userData.addresses && userData.addresses.length > 0
                   ? userData.addresses
@@ -163,25 +231,23 @@ const AccountEditPage = () => {
   const getUpdateData = () => {
     let finalPhoneNumber: string | null = null;
     if (typeof formData.phoneNumber === 'string' && formData.phoneNumber !== '') {
-      finalPhoneNumber = formData.phoneNumber;
+      // Ensure phone number is exactly 10 digits without any prefix
+      const cleaned = formData.phoneNumber.replace(/\D/g, '');
+      if (cleaned.length === 10) {
+        finalPhoneNumber = cleaned;
+      } else if (cleaned.length === 11 && cleaned.startsWith('1')) {
+        finalPhoneNumber = cleaned.slice(1); // Remove leading 1
+      } else {
+        finalPhoneNumber = formData.phoneNumber; // Keep as is if not properly formatted
+      }
     } else if (formData.phoneNumber === null) {
       finalPhoneNumber = null;
     }
     const updateData: any = {
       displayName: formData.displayName,
       phoneNumber: finalPhoneNumber,
-      addresses: addresses.map((addr) => ({
-        street: addr.street || '',
-        city: addr.city || '',
-        state: addr.state || '',
-        zipCode: addr.zipCode || '',
-        country: addr.country || '',
-      })),
       updatedAt: new Date(),
     };
-    if (user?.role === 'vendor') {
-      updateData.shopName = formData.displayName;
-    }
     return updateData;
   };
 
@@ -191,7 +257,7 @@ const AccountEditPage = () => {
     if (!formData.displayName.trim()) {
       hasError = true;
     }
-    if (!formData.phoneNumber || !/^\+?\d{10,15}$/.test(formData.phoneNumber)) {
+    if (!formData.phoneNumber || !validatePhoneNumber(formData.phoneNumber)) {
       hasError = true;
     }
     addresses.forEach((address, idx) => {
@@ -221,12 +287,7 @@ const AccountEditPage = () => {
 
     try {
       const userDocRef = doc(db, 'users', user.uid);
-      // Log the current Firestore user document for debugging
-      const userDocSnap = await getDoc(userDocRef);
-      // console.log('Current Firestore user document:', userDocSnap.data());
-      // Log the update payload for debugging
       const updateData = getUpdateData();
-      // console.log('Firestore update payload:', updateData);
       await updateDoc(userDocRef, updateData);
       await refreshUserData();
       setSuccess('Profile updated successfully!');
@@ -306,10 +367,16 @@ const AccountEditPage = () => {
                   id="phoneNumber"
                   name="phoneNumber"
                   className="mt-1 block w-full rounded-xl border border-gray-300 bg-white/80 px-4 py-2 text-base text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-                  value={formData.phoneNumber || ''}
-                  onChange={handleChange}
+                  value={formatPhoneNumberForDisplay(formData.phoneNumber || '')}
+                  onChange={handlePhoneChange}
                   autoComplete="tel"
+                  placeholder="(123) 456-7890"
                 />
+                {formData.phoneNumber && !validatePhoneNumber(formData.phoneNumber) && (
+                  <p className="mt-1 text-xs text-red-500">
+                    Please enter a valid 10-digit phone number (e.g., 123-456-7890)
+                  </p>
+                )}
               </div>
             </div>
 

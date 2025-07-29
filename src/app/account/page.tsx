@@ -27,6 +27,16 @@ export default function AccountPage() {
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [makingDefaultIdx, setMakingDefaultIdx] = useState<number | null>(null);
 
+  // Phone number formatting function
+  const formatPhoneForDisplay = (value: string) => {
+    if (!value) return 'N/A';
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    return value; // Return original if not 10 digits
+  };
+
   useEffect(() => {
     const fetchUserData = async () => {
       if (!user || authLoading) {
@@ -167,10 +177,10 @@ export default function AccountPage() {
   return (
     <ProtectedRoute allowedRoles={['customer', 'vendor', 'admin', 'admin-manager']}>
       <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-blue-200 via-pink-100 to-yellow-100">
-        {/* Animated Blobs */}
-        <div className="animate-blob absolute -top-32 -left-32 z-0 h-96 w-96 rounded-full bg-pink-200 opacity-40 blur-3xl filter" />
-        <div className="animate-blob animation-delay-2000 absolute -right-32 -bottom-32 z-0 h-96 w-96 rounded-full bg-blue-200 opacity-40 blur-3xl filter" />
-        <div className="animate-blob animation-delay-4000 absolute top-1/2 left-1/2 z-0 h-72 w-72 rounded-full bg-yellow-100 opacity-30 blur-2xl filter" />
+        {/* Background Blobs */}
+        <div className="absolute -top-32 -left-32 z-0 h-96 w-96 rounded-full bg-pink-200 opacity-40 blur-3xl filter" />
+        <div className="absolute -right-32 -bottom-32 z-0 h-96 w-96 rounded-full bg-blue-200 opacity-40 blur-3xl filter" />
+        <div className="absolute top-1/2 left-1/2 z-0 h-72 w-72 rounded-full bg-yellow-100 opacity-30 blur-2xl filter" />
         <div className="relative z-10 w-full max-w-xl">
           <div className="relative rounded-3xl bg-white/70 px-8 py-10 shadow-2xl backdrop-blur-lg">
             <div className="mb-8 flex flex-col items-center justify-center gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
@@ -230,16 +240,16 @@ export default function AccountPage() {
               </span>
             </div>
             <div className="mb-6 border-b border-gray-200"></div>
-            {/* Redesigned Profile Information Section with Animation */}
-            <div className="animate-fade-in-up space-y-6 transition-all duration-700">
+            {/* Redesigned Profile Information Section */}
+            <div className="space-y-6 transition-all duration-700">
               <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-gray-900">
-                <UserCircleIcon className="animate-bounce-slow h-7 w-7 text-blue-400" />
+                <UserCircleIcon className="h-7 w-7 text-blue-400" />
                 Profile Information
               </h2>
               <div className="flex flex-col gap-4 rounded-2xl bg-white/80 p-6 shadow-lg transition-shadow duration-300 hover:shadow-2xl">
                 <div className="flex items-center gap-3">
                   <svg
-                    className="animate-fade-in h-5 w-5 text-blue-500"
+                    className="h-5 w-5 text-blue-500"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -259,7 +269,7 @@ export default function AccountPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <svg
-                    className="animate-fade-in h-5 w-5 text-green-500"
+                    className="h-5 w-5 text-green-500"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -273,11 +283,11 @@ export default function AccountPage() {
                   </svg>
                   <span className="font-medium text-gray-600">Phone Number:</span>
                   <span className="rounded-full bg-green-50 px-3 py-1 text-sm font-semibold text-green-700 shadow-sm">
-                    {userData.phoneNumber || 'N/A'}
+                    {formatPhoneForDisplay(userData.phoneNumber || '')}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CalendarDaysIcon className="animate-fade-in h-5 w-5 text-purple-500" />
+                  <CalendarDaysIcon className="h-5 w-5 text-purple-500" />
                   <span className="font-medium text-gray-600">Joined:</span>
                   <span className="rounded-full bg-purple-50 px-3 py-1 text-sm font-semibold text-purple-700 shadow-sm">
                     {(() => {
@@ -305,7 +315,7 @@ export default function AccountPage() {
             {/* End Profile Information Section */}
             <div className="my-6 border-b border-gray-200"></div>
             <h2 className="mb-2 flex items-center gap-2 text-xl font-bold text-gray-900">
-              <MapPinIcon className="animate-bounce-slow h-6 w-6 text-blue-400" />
+              <MapPinIcon className="h-6 w-6 text-blue-400" />
               Address Information
             </h2>
             {hasAddresses ? (
@@ -313,17 +323,17 @@ export default function AccountPage() {
                 {addresses.map((addr, idx) => (
                   <div
                     key={idx}
-                    className="animate-fade-in-up relative rounded-2xl bg-white/80 p-6 shadow-lg transition-shadow duration-300 hover:shadow-2xl"
+                    className="relative rounded-2xl bg-white/80 p-6 shadow-lg transition-shadow duration-300 hover:shadow-2xl"
                   >
                     <div className="mb-2 flex justify-end gap-2">
                       {idx === 0 && (
-                        <span className="animate-fade-in rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700 shadow">
+                        <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700 shadow">
                           Default
                         </span>
                       )}
                       {idx !== 0 && addresses.length > 1 && (
                         <button
-                          className="animate-fade-in rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-blue-700 shadow transition-all hover:bg-blue-100"
+                          className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-blue-700 shadow transition-all hover:bg-blue-100"
                           onClick={() => handleMakeDefault(idx)}
                           disabled={makingDefaultIdx === idx}
                         >
@@ -332,7 +342,7 @@ export default function AccountPage() {
                       )}
                       {idx !== 0 && addresses.length > 1 && (
                         <button
-                          className="animate-fade-in rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700 shadow transition-all hover:bg-red-200"
+                          className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700 shadow transition-all hover:bg-red-200"
                           onClick={() => handleRemoveAddress(idx)}
                           disabled={removingIdx === idx}
                         >
@@ -342,27 +352,27 @@ export default function AccountPage() {
                     </div>
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                       <div className="flex items-center gap-3">
-                        <HomeIcon className="animate-fade-in h-5 w-5 text-blue-400" />
+                        <HomeIcon className="h-5 w-5 text-blue-400" />
                         <span className="font-medium text-gray-700">Street:</span>
                         <span className="ml-1 text-gray-900">{addr.street}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <BuildingOffice2Icon className="animate-fade-in h-5 w-5 text-blue-400" />
+                        <BuildingOffice2Icon className="h-5 w-5 text-blue-400" />
                         <span className="font-medium text-gray-700">City:</span>
                         <span className="ml-1 text-gray-900">{addr.city}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <IdentificationIcon className="animate-fade-in h-5 w-5 text-blue-400" />
+                        <IdentificationIcon className="h-5 w-5 text-blue-400" />
                         <span className="font-medium text-gray-700">State:</span>
                         <span className="ml-1 text-gray-900">{addr.state}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <MapIcon className="animate-fade-in h-5 w-5 text-blue-400" />
+                        <MapIcon className="h-5 w-5 text-blue-400" />
                         <span className="font-medium text-gray-700">Zip Code:</span>
                         <span className="ml-1 text-gray-900">{addr.zipCode}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <GlobeAltIcon className="animate-fade-in h-5 w-5 text-blue-400" />
+                        <GlobeAltIcon className="h-5 w-5 text-blue-400" />
                         <span className="font-medium text-gray-700">Country:</span>
                         <span className="ml-1 text-gray-900">{addr.country}</span>
                       </div>
@@ -371,14 +381,14 @@ export default function AccountPage() {
                 ))}
               </div>
             ) : (
-              <div className="animate-fade-in-up flex flex-col items-center justify-center rounded-2xl bg-white/60 p-10 shadow backdrop-blur-md">
+              <div className="flex flex-col items-center justify-center rounded-2xl bg-white/60 p-10 shadow backdrop-blur-md">
                 {/* SVG or graphical illustration for no address */}
                 <svg
                   width="80"
                   height="80"
                   viewBox="0 0 80 80"
                   fill="none"
-                  className="animate-fade-in mb-4"
+                  className="mb-4"
                 >
                   <rect x="10" y="30" width="60" height="35" rx="8" fill="#e0e7ff" />
                   <rect x="25" y="45" width="30" height="10" rx="3" fill="#fbbf24" />
@@ -394,7 +404,7 @@ export default function AccountPage() {
                 <Link href="/account/edit">
                   <button
                     type="button"
-                    className="animate-fade-in inline-flex justify-center rounded-full bg-gradient-to-r from-blue-500 to-pink-400 px-6 py-2 text-base font-bold text-white shadow transition-all hover:from-blue-600 hover:to-pink-500"
+                    className="inline-flex justify-center rounded-full bg-gradient-to-r from-blue-500 to-pink-400 px-6 py-2 text-base font-bold text-white shadow transition-all hover:from-blue-600 hover:to-pink-500"
                   >
                     Add Your First Address
                   </button>
@@ -402,71 +412,12 @@ export default function AccountPage() {
               </div>
             )}
             {removeError && (
-              <div className="animate-fade-in mt-4 rounded border border-red-300 bg-red-100 p-2 text-center font-semibold text-red-700">
+              <div className="mt-4 rounded border border-red-300 bg-red-100 p-2 text-center font-semibold text-red-700">
                 {removeError}
               </div>
             )}
           </div>
         </div>
-        <style jsx global>{`
-          .animate-blob {
-            animation: blob 7s infinite;
-          }
-          @keyframes blob {
-            0%,
-            100% {
-              transform: translateY(0px) scale(1);
-            }
-            33% {
-              transform: translateY(-20px) scale(1.05);
-            }
-            66% {
-              transform: translateY(10px) scale(0.97);
-            }
-          }
-          .animation-delay-2000 {
-            animation-delay: 2s;
-          }
-          .animation-delay-4000 {
-            animation-delay: 4s;
-          }
-          .animate-fade-in-up {
-            animation: fadeInUp 1s cubic-bezier(0.23, 1, 0.32, 1) both;
-          }
-          @keyframes fadeInUp {
-            0% {
-              opacity: 0;
-              transform: translateY(40px);
-            }
-            100% {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          .animate-bounce-slow {
-            animation: bounceSlow 2.5s infinite;
-          }
-          @keyframes bounceSlow {
-            0%,
-            100% {
-              transform: translateY(0);
-            }
-            50% {
-              transform: translateY(-8px);
-            }
-          }
-          .animate-fade-in {
-            animation: fadeIn 1.2s both;
-          }
-          @keyframes fadeIn {
-            0% {
-              opacity: 0;
-            }
-            100% {
-              opacity: 1;
-            }
-          }
-        `}</style>
       </div>
     </ProtectedRoute>
   );

@@ -46,6 +46,16 @@ export default function AdminPage() {
   >({});
   const [orderSearch, setOrderSearch] = useState('');
 
+  // Phone number formatting function
+  const formatPhoneForDisplay = (value: string) => {
+    if (!value) return 'N/A';
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    return value; // Return original if not 10 digits
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -859,7 +869,7 @@ export default function AdminPage() {
                                   {user.email || 'N/A'}
                                 </td>
                                 <td className="px-6 py-3 text-base whitespace-nowrap text-gray-700">
-                                  {user.phoneNumber || 'N/A'}
+                                  {user.phoneNumber ? formatPhoneForDisplay(user.phoneNumber) : 'N/A'}
                                 </td>
                                 <td className="px-6 py-3 whitespace-nowrap">
                                   <span

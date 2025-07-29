@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { doc, getDoc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, Timestamp, addDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { SupportTicket, Message, UserRole } from '@/types';
 import { useAuth } from '@/context/AuthContext';
@@ -119,6 +119,26 @@ export default function AccountSupportTicketDetailPage() {
         status: ticket.status === 'resolved' ? 'in-progress' : ticket.status, // Reopen if resolved
       });
 
+      // Create notification for new message
+      try {
+        const notificationMessage = userRole === 'customer' 
+          ? `New message in support ticket "${ticket.subject}"`
+          : `New message from customer in ticket "${ticket.subject}"`;
+        
+        await addDoc(collection(db, 'notifications'), {
+          userId: ticket.userId, // Notify the ticket owner
+          type: 'support_message',
+          message: notificationMessage,
+          createdAt: new Date(),
+          read: false,
+          data: { ticketId, ticketNumber: ticket.id },
+          link: `/account/support/${ticketId}`,
+          linkLabel: ticket.id,
+        });
+      } catch (notifErr) {
+        console.error('Failed to create notification:', notifErr);
+      }
+
       setTicket((prevTicket) => {
         if (!prevTicket) return null;
         const updatedMessages = [...prevTicket.messages, message];
@@ -160,6 +180,22 @@ export default function AccountSupportTicketDetailPage() {
         updatedAt: message.timestamp,
         status: 'in-progress',
       });
+
+      // Create notification for ticket reopening
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          userId: ticket.userId,
+          type: 'support_ticket_reopened',
+          message: `Support ticket "${ticket.subject}" has been reopened.`,
+          createdAt: new Date(),
+          read: false,
+          data: { ticketId, ticketNumber: ticket.id },
+          link: `/account/support/${ticketId}`,
+          linkLabel: ticket.id,
+        });
+      } catch (notifErr) {
+        console.error('Failed to create notification:', notifErr);
+      }
 
       setTicket((prevTicket) => {
         if (!prevTicket) return null;
@@ -212,6 +248,22 @@ export default function AccountSupportTicketDetailPage() {
       }
 
       await updateDoc(ticketRef, updates);
+
+      // Create notification for ticket closing
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          userId: ticket.userId,
+          type: 'support_ticket_closed',
+          message: `Support ticket "${ticket.subject}" has been closed.`,
+          createdAt: new Date(),
+          read: false,
+          data: { ticketId, ticketNumber: ticket.id },
+          link: `/account/support/${ticketId}`,
+          linkLabel: ticket.id,
+        });
+      } catch (notifErr) {
+        console.error('Failed to create notification:', notifErr);
+      }
 
       setTicket((prevTicket) => {
         if (!prevTicket) return null;

@@ -14,6 +14,7 @@ import {
   writeBatch,
   runTransaction,
   arrayUnion,
+  getDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Address, Order, CartItem } from '@/types';
@@ -55,8 +56,54 @@ export default function CheckoutPage() {
         }
   );
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cod');
+  const [selectedDeliveryOption, setSelectedDeliveryOption] = useState<'delivery' | 'pickup'>('delivery');
   const [phone, setPhone] = useState(user?.phoneNumber || '');
   const [email, setEmail] = useState('');
+
+  // Phone number formatter
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-digits
+    const cleaned = value.replace(/\D/g, '');
+    
+    // If it starts with 91 (old India format), convert to US format
+    if (cleaned.startsWith('91') && cleaned.length >= 12) {
+      return cleaned.slice(2, 12);
+    }
+    
+    // If it starts with 1 and has 11 digits, remove the leading 1
+    if (cleaned.startsWith('1') && cleaned.length === 11) {
+      return cleaned.slice(1);
+    }
+    
+    // If it has 10 digits, return as is
+    if (cleaned.length === 10) {
+      return cleaned;
+    }
+    
+    // Return the cleaned value
+    return cleaned;
+  };
+
+  // Format phone number for display
+  const formatPhoneForDisplay = (value: string) => {
+    if (!value) return '';
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    // For partial numbers, format what we have
+    if (cleaned.length === 0) return '';
+    if (cleaned.length <= 3) return `(${cleaned}`;
+    if (cleaned.length <= 6) return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    let cleaned = value.replace(/\D/g, '');
+    cleaned = cleaned.slice(0, 10);
+    setPhone(cleaned);
+  };
   const [addressErrors, setAddressErrors] = useState({
     street: '',
     city: '',
@@ -111,7 +158,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (user) {
-      setPhone(user.phoneNumber || '');
+      setPhone(formatPhoneNumber(user.phoneNumber || ''));
       setEmail(user.email || '');
     }
   }, [user]);
@@ -223,39 +270,127 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = async () => {
     if (!user) {
-      // console.log('User not logged in, redirecting to login.');
       toast.error('Please log in to place an order.');
       router.push('/login');
       return;
     }
-    // Debug: Log user info before placing order
-    // console.log('Placing order as user:', user);
-    // console.log('User UID:', user.uid);
-    // console.log('User role:', user.role);
-    if (!shippingAddress.street || !shippingAddress.city || !shippingAddress.zipCode) {
-      // console.log('Incomplete shipping address.');
-      toast.error('Please provide a complete shipping address.');
-      setIsEditingAddress(true);
+
+    // Debug: Log user information
+    console.log('User details:', {
+      uid: user.uid,
+      email: user.email,
+      role: user.role,
+      displayName: user.displayName
+    });
+
+    // Verify user document exists in Firestore
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (!userDocSnap.exists()) {
+        console.error('User document does not exist in Firestore');
+        toast.error('User account not found. Please contact support.');
+        return;
+      }
+      console.log('User document exists:', userDocSnap.data());
+    } catch (error) {
+      console.error('Error checking user document:', error);
+      toast.error('Error verifying user account. Please try again.');
       return;
     }
+
+    // Verify cart document exists and is accessible
+    try {
+      const cartDocRef = doc(db, 'carts', user.uid);
+      const cartDocSnap = await getDoc(cartDocRef);
+      if (!cartDocSnap.exists()) {
+        console.error('Cart document does not exist in Firestore');
+        toast.error('Cart not found. Please refresh the page and try again.');
+        return;
+      }
+      console.log('Cart document exists:', cartDocSnap.data());
+    } catch (error) {
+      console.error('Error checking cart document:', error);
+      toast.error('Error accessing cart. Please try again.');
+      return;
+    }
+
+    // Verify all products in cart exist and are accessible
+    try {
+      for (const item of cartItems) {
+        const productDocRef = doc(db, 'products', item.id);
+        const productDocSnap = await getDoc(productDocRef);
+        if (!productDocSnap.exists()) {
+          console.error(`Product ${item.id} does not exist in Firestore`);
+          toast.error(`Product "${item.name}" is no longer available. Please remove it from your cart.`);
+          return;
+        }
+        console.log(`Product ${item.id} exists:`, productDocSnap.data());
+      }
+    } catch (error) {
+      console.error('Error checking products:', error);
+      toast.error('Error verifying products. Please try again.');
+      return;
+    }
+
+    // Verify orderMeta document exists and is accessible
+    try {
+      const orderMetaDocRef = doc(db, 'orderMeta', 'numbering');
+      const orderMetaDocSnap = await getDoc(orderMetaDocRef);
+      if (!orderMetaDocSnap.exists()) {
+        console.log('OrderMeta document does not exist, will be created during order placement');
+      } else {
+        console.log('OrderMeta document exists:', orderMetaDocSnap.data());
+      }
+    } catch (error) {
+      console.error('Error checking orderMeta document:', error);
+      toast.error('Error verifying order system. Please try again.');
+      return;
+    }
+
+    // Basic validation
+    if (cartItems.length === 0) {
+      toast.error('Your cart is empty. Add items to proceed.');
+      return;
+    }
+
     if (!phone || !email) {
       toast.error('Phone and email are required.');
       return;
     }
-    if (cartItems.length === 0) {
-      // console.log('Cart is empty.');
-      toast.error('Your cart is empty. Add items to proceed.');
+
+    // Phone number validation - ensure it's in US format
+    const cleanedPhone = phone.replace(/\D/g, '');
+    if (cleanedPhone.length !== 10) {
+      toast.error('Please enter a valid 10-digit phone number.');
       return;
+    }
+
+    // Address validation only for delivery
+    if (selectedDeliveryOption === 'delivery') {
+      if (!shippingAddress.street?.trim() || !shippingAddress.city?.trim() || !shippingAddress.state?.trim() || !shippingAddress.zipCode?.trim() || !shippingAddress.country?.trim()) {
+        toast.error('Please provide a complete shipping address for delivery.');
+        setIsEditingAddress(true);
+        return;
+      }
     }
 
     try {
       const orderData = {
         userId: user.uid,
         cartItems: cartItems,
-        shippingAddress: { ...shippingAddress, phoneNumber: phone },
+        shippingAddress: selectedDeliveryOption === 'delivery' ? { ...shippingAddress, phoneNumber: phone } : {
+          street: 'Self-Pickup',
+          city: 'Store Location',
+          state: 'N/A',
+          zipCode: 'N/A',
+          country: 'N/A',
+          phoneNumber: phone
+        },
         paymentMethod: selectedPaymentMethod,
         phoneNumber: phone,
         email: email,
+        deliveryOption: selectedDeliveryOption,
       };
 
       if (selectedPaymentMethod === 'cod') {
@@ -272,19 +407,20 @@ export default function CheckoutPage() {
         });
 
         const orderNumbers: string[] = [];
+        const orderRefs: any[] = [];
+        
         for (const vendorId in ordersByVendor) {
           const vendorItems = ordersByVendor[vendorId];
           const vendorOrderSubtotal = vendorItems.reduce(
             (sum, item) => sum + item.price * item.quantity,
             0
           );
-          const deliveryFee = calculateDeliveryFee(vendorOrderSubtotal);
+          const deliveryFee = selectedDeliveryOption === 'delivery' ? DELIVERY_FEE : 0;
           const serviceFee = calculateServiceFee(vendorOrderSubtotal);
           const total = vendorOrderSubtotal + deliveryFee + serviceFee;
 
           // Generate persistent order number
           let orderNumber = '';
-          // console.log('About to run Firestore transaction for order number for vendor:', vendorId);
           await runTransaction(db, async (transaction) => {
             const metaRef = doc(db, 'orderMeta', 'numbering');
             const metaSnap = await transaction.get(metaRef);
@@ -296,17 +432,16 @@ export default function CheckoutPage() {
             orderNumber = `ORD-2024-${String(newNumber).padStart(4, '0')}`;
             transaction.set(metaRef, { lastNumber: newNumber }, { merge: true });
           });
-          // console.log(
-          //   'Successfully ran Firestore transaction for order number. Got orderNumber:',
-          //   orderNumber
-          // );
+          
           orderNumbers.push(orderNumber);
 
           const newOrderRef = doc(ordersCollectionRef);
+          orderRefs.push(newOrderRef);
+          
           const newOrder: Order = {
             id: newOrderRef.id,
             userId: user.uid,
-            vendorId: vendorId, // Add vendorId to order
+            vendorId: vendorId,
             items: vendorItems,
             total,
             deliveryFee,
@@ -315,6 +450,7 @@ export default function CheckoutPage() {
             shippingAddress: shippingAddress,
             paymentStatus: String(selectedPaymentMethod) === 'cod' ? 'pending' : 'completed',
             paymentMethod: selectedPaymentMethod,
+            deliveryOption: selectedDeliveryOption,
             phoneNumber: phone,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -323,36 +459,23 @@ export default function CheckoutPage() {
             customerEmail: email, // Optionally store email
             orderNumber, // Store persistent order number
           };
-          // Debug: Log before setting order
-          // console.log(
-          //   'Attempting to create order for vendor:',
-          //   vendorId,
-          //   'OrderRef:',
-          //   newOrderRef.path,
-          //   'Order:',
-          //   newOrder
-          // );
+          
           batch.set(newOrderRef, newOrder);
-          // Debug: Log after setting order
-          // console.log('Order set in batch for vendor:', vendorId);
 
           // Decrement product stock
           for (const item of vendorItems) {
             const productRef = doc(db, 'products', item.id);
-            // Debug: Log before updating product stock
-            // console.log(
-            //   'Attempting to update product stock:',
-            //   productRef.path,
-            //   'Old stock:',
-            //   item.stock,
-            //   'Quantity:',
-            //   item.quantity
-            // );
             batch.update(productRef, { stock: item.stock - item.quantity });
-            // Debug: Log after updating product stock
-            // console.log('Product stock update set in batch for:', productRef.path);
           }
-          // Add notification for this order
+        }
+
+        // Commit the batch first - if this fails, no notifications will be created
+        console.log('Attempting to commit batch...');
+        await batch.commit();
+        console.log('Batch committed successfully');
+        
+        // Only create notifications after successful batch commit
+        for (let i = 0; i < orderNumbers.length; i++) {
           try {
             await addDoc(collection(db, 'notifications'), {
               userId: user.uid,
@@ -360,31 +483,23 @@ export default function CheckoutPage() {
               message: 'Your order has been placed successfully!',
               createdAt: new Date(),
               read: false,
-              data: { orderNumber },
-              link: `/account/orders/${newOrderRef.id}`,
-              linkLabel: orderNumber,
+              data: { orderNumber: orderNumbers[i] },
+              link: `/account/orders/${orderRefs[i].id}`,
+              linkLabel: orderNumbers[i],
             });
           } catch (notifErr) {
-            // console.error('Failed to create notification:', notifErr);
+            console.error('Failed to create notification for order:', orderNumbers[i], notifErr);
+            // Don't fail the entire order process if notification creation fails
           }
         }
 
-        // Debug: Log before committing batch
-        // console.log('Committing Firestore batch for order placement...');
-        await batch.commit();
-        // Debug: Log after committing batch
-        // console.log('Batch committed successfully. Clearing cart...');
-        // Debug: Log before clearing cart
-        // console.log('Clearing cart for user UID:', user.uid);
         clearCartContext();
-        // Debug: Log after clearing cart
-        // console.log('Cart cleared for user UID:', user.uid);
         toast.success('Order(s) placed successfully (Cash on Delivery)!');
         router.push('/order-confirmation');
       } else if (selectedPaymentMethod === 'razorpay') {
         // Initiate Razorpay payment
         const razorpayOrderDetails = {
-          amount: subtotal * 100, // Razorpay amount in smallest currency unit (paise)
+          amount: orderTotal * 100, // Razorpay amount in smallest currency unit (paise)
           currency: 'USD',
           receipt: `receipt_${Date.now()}`,
           payment_capture: 1, // Auto capture payment
@@ -423,78 +538,18 @@ export default function CheckoutPage() {
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpayOrderId: response.razorpay_order_id,
                 razorpaySignature: response.razorpay_signature,
+                userId: user.uid,
+                cartItems: cartItems,
+                shippingAddress: orderData.shippingAddress,
+                deliveryOption: selectedDeliveryOption,
+                paymentMethod: selectedPaymentMethod,
+                phoneNumber: phone,
+                email: email,
               }),
             });
             const verificationResult = await finalizeOrderRes.json();
 
             if (verificationResult.success) {
-              const batch = writeBatch(db);
-              const ordersCollectionRef = collection(db, 'orders');
-
-              // Group cart items by vendor
-              const ordersByVendor: { [vendorId: string]: CartItem[] } = {};
-              cartItems.forEach((item) => {
-                if (!ordersByVendor[item.vendorId]) {
-                  ordersByVendor[item.vendorId] = [];
-                }
-                ordersByVendor[item.vendorId].push(item);
-              });
-
-              for (const vendorId in ordersByVendor) {
-                const vendorItems = ordersByVendor[vendorId];
-                const vendorOrderSubtotal = vendorItems.reduce(
-                  (sum, item) => sum + item.price * item.quantity,
-                  0
-                );
-                const deliveryFee = calculateDeliveryFee(vendorOrderSubtotal);
-                const serviceFee = calculateServiceFee(vendorOrderSubtotal);
-                const total = vendorOrderSubtotal + deliveryFee + serviceFee;
-
-                // Generate persistent order number
-                let orderNumber = '';
-                await runTransaction(db, async (transaction) => {
-                  const metaRef = doc(db, 'orderMeta', 'numbering');
-                  const metaSnap = await transaction.get(metaRef);
-                  let lastNumber = 0;
-                  if (metaSnap.exists()) {
-                    lastNumber = metaSnap.data().lastNumber || 0;
-                  }
-                  const newNumber = lastNumber + 1;
-                  orderNumber = `ORD-2024-${String(newNumber).padStart(4, '0')}`;
-                  transaction.set(metaRef, { lastNumber: newNumber }, { merge: true });
-                });
-
-                const newOrderRef = doc(ordersCollectionRef);
-                const newOrder: Order = {
-                  id: newOrderRef.id,
-                  userId: user.uid,
-                  vendorId: vendorId, // Add vendorId to order
-                  items: vendorItems,
-                  total,
-                  deliveryFee,
-                  serviceFee,
-                  status: 'pending',
-                  shippingAddress: shippingAddress,
-                  paymentStatus: String(selectedPaymentMethod) === 'cod' ? 'pending' : 'completed',
-                  paymentMethod: selectedPaymentMethod,
-                  phoneNumber: phone,
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                  estimatedDeliveryDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
-                  customerName: user.displayName || '', // Store customer name
-                  customerEmail: email, // Optionally store email
-                  orderNumber, // Store persistent order number
-                };
-                batch.set(newOrderRef, newOrder);
-
-                // Decrement product stock
-                for (const item of vendorItems) {
-                  const productRef = doc(db, 'products', item.id);
-                  batch.update(productRef, { stock: item.stock - item.quantity });
-                }
-              }
-
-              await batch.commit();
               clearCartContext();
               toast.success('Payment successful and order placed!');
               router.push('/order-confirmation');
@@ -521,13 +576,27 @@ export default function CheckoutPage() {
         rzp.open();
       }
     } catch (error) {
-      // console.error('Error placing order:', error);
-      toast.error('Failed to place order. Please try again.');
+      console.error('Error placing order:', error);
+      
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('permission-denied')) {
+          toast.error('Permission denied. Please check your account status.');
+        } else if (error.message.includes('unavailable')) {
+          toast.error('Service temporarily unavailable. Please try again.');
+        } else if (error.message.includes('resource-exhausted')) {
+          toast.error('Service overloaded. Please try again in a moment.');
+        } else {
+          toast.error(`Failed to place order: ${error.message}`);
+        }
+      } else {
+        toast.error('Failed to place order. Please try again.');
+      }
     }
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = calculateDeliveryFee(subtotal);
+  const shipping = selectedDeliveryOption === 'delivery' ? DELIVERY_FEE : 0;
   const serviceFee = calculateServiceFee(subtotal);
   const orderTotal = subtotal + shipping + serviceFee;
 
@@ -565,7 +634,7 @@ export default function CheckoutPage() {
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-100 via-blue-50 to-pink-50 px-4 py-12">
         <div className="animate-fade-in flex w-full max-w-3xl flex-col gap-10 rounded-3xl border border-blue-100 bg-white/90 p-8 shadow-2xl md:p-12">
           {/* Decorative Gradient Icon */}
-          <span className="absolute -top-10 left-1/2 inline-flex h-20 w-20 -translate-x-1/2 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-blue-500 via-yellow-300 to-pink-400 shadow-lg">
+          <span className="relative mx-auto -mt-16 mb-4 inline-flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-blue-500 via-yellow-300 to-pink-400 shadow-lg">
             <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
               <rect x="8" y="8" width="48" height="48" rx="12" fill="#3B82F6" />
               <rect x="20" y="20" width="24" height="24" rx="6" fill="#FBBF24" />
@@ -573,7 +642,7 @@ export default function CheckoutPage() {
             </svg>
           </span>
           {/* Gradient Accent Bar */}
-          <div className="mx-auto mt-8 mb-6 h-2 w-24 rounded-full bg-gradient-to-r from-blue-400 to-pink-400" />
+          <div className="mx-auto mb-6 h-2 w-24 rounded-full bg-gradient-to-r from-blue-400 to-pink-400" />
           <h1 className="mb-2 text-center text-4xl font-extrabold tracking-tight text-gray-900 drop-shadow-sm md:text-5xl">
             Checkout
           </h1>
@@ -598,8 +667,8 @@ export default function CheckoutPage() {
                 <label className="mb-1 block font-medium text-gray-700">Phone</label>
                 <input
                   type="text"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  value={formatPhoneForDisplay(phone)}
+                  onChange={handlePhoneChange}
                   className="w-full rounded-xl border border-gray-300 bg-white/90 px-4 py-3 text-gray-900 shadow-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-300"
                 />
               </div>
@@ -817,6 +886,57 @@ export default function CheckoutPage() {
             )}
           </div>
 
+          {/* Delivery Options */}
+          <div className="mb-4 rounded-2xl border border-blue-50 bg-white/80 p-6 shadow-lg">
+            <h2 className="mb-4 flex items-center gap-2 text-2xl font-bold text-gray-900">
+              <span className="mr-2 inline-block h-6 w-2 rounded-full bg-gradient-to-r from-blue-400 to-pink-400" />
+              Delivery Options
+            </h2>
+            <div className="flex flex-col gap-4 md:flex-row">
+              <button
+                className={`flex-1 rounded-xl border-2 p-4 ${selectedDeliveryOption === 'delivery' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'} shadow transition-all hover:shadow-lg focus:ring-2 focus:ring-blue-400 focus:outline-none`}
+                onClick={() => setSelectedDeliveryOption('delivery')}
+                type="button"
+                aria-pressed={selectedDeliveryOption === 'delivery'}
+              >
+                <span className="flex items-center gap-2 text-lg font-semibold">
+                  <span role="img" aria-label="Delivery" className="text-2xl text-blue-500">
+                    🚚
+                  </span>
+                  Delivery ($30)
+                </span>
+                <span className="mt-1 block text-sm text-gray-500">
+                  Get your order delivered to your doorstep.
+                </span>
+              </button>
+              <button
+                className={`flex-1 rounded-xl border-2 p-4 ${selectedDeliveryOption === 'pickup' ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white'} shadow transition-all hover:shadow-lg focus:ring-2 focus:ring-green-400 focus:outline-none`}
+                onClick={() => setSelectedDeliveryOption('pickup')}
+                type="button"
+                aria-pressed={selectedDeliveryOption === 'pickup'}
+              >
+                <span className="flex items-center gap-2 text-lg font-semibold">
+                  <span role="img" aria-label="Pickup" className="text-2xl text-green-500">
+                    🏃
+                  </span>
+                  Self-Pickup (Free)
+                </span>
+                <span className="mt-1 block text-sm text-gray-500">
+                  Pick up your order at our store.
+                </span>
+              </button>
+            </div>
+            {selectedDeliveryOption === 'delivery' && (
+              <div className="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
+                <p className="font-medium">📦 FedEx Delivery Information:</p>
+                <p className="mt-1">
+                  Delivery charges are calculated based on package size, weight, and distance between source and destination. 
+                  The current rate is a default $30. Final pricing will be updated after order confirmation based on actual FedEx rates.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Payment Method */}
           <div className="mb-4 rounded-2xl border border-blue-50 bg-white/80 p-6 shadow-lg">
             <h2 className="mb-4 flex items-center gap-2 text-2xl font-bold text-gray-900">
@@ -896,63 +1016,27 @@ export default function CheckoutPage() {
                 <div className="mt-2 flex items-center justify-between font-semibold text-gray-700">
                   <span className="flex w-full flex-col gap-2 md:flex-row md:items-center">
                     <span className="flex items-center gap-2">Delivery Fee</span>
-                    {subtotal < FREE_SHIPPING_THRESHOLD && (
-                      <span className="animate-fade-in ml-2 hidden items-center overflow-hidden rounded-full border border-blue-100 bg-gradient-to-r from-blue-50 via-green-50 to-pink-50 px-4 py-2 whitespace-nowrap shadow md:flex">
-                        <span className="mr-1 animate-bounce text-lg leading-tight font-extrabold text-green-600 md:text-xl">
-                          ${subtotal}
-                        </span>
-                        <span
-                          className="ml-1 align-middle text-base font-medium text-gray-500 md:text-lg"
-                          style={{ fontWeight: 500 }}
-                        >
-                          away from <span className="font-bold text-green-600">FREE delivery!</span>
-                        </span>
-                      </span>
+                    {selectedDeliveryOption === 'delivery' && (
+                      <span className="text-lg font-bold text-blue-600">${DELIVERY_FEE.toFixed(2)}</span>
+                    )}
+                    {selectedDeliveryOption === 'pickup' && (
+                      <span className="text-lg font-bold text-green-600">Free</span>
                     )}
                   </span>
                   <span
                     className={
-                      subtotal >= FREE_SHIPPING_THRESHOLD
-                        ? 'flex flex-col items-end'
+                      selectedDeliveryOption === 'pickup'
+                        ? 'text-lg font-bold text-green-600'
                         : 'text-lg font-bold text-blue-600'
                     }
                   >
-                    {subtotal >= FREE_SHIPPING_THRESHOLD ? (
-                      <>
-                        <span className="text-xl font-extrabold text-green-600">$0.00</span>
-                        <span className="mt-1 flex items-center justify-center">
-                          <span className="flex flex-row items-center gap-1 rounded-full border border-green-200 bg-gradient-to-r from-green-100 via-blue-50 to-pink-50 px-3 py-1 whitespace-nowrap shadow-sm">
-                            <span
-                              className="rounded-full border border-green-300 bg-gradient-to-r from-green-400 to-blue-400 px-3 py-1 text-xs font-bold text-white shadow select-none"
-                              style={{ letterSpacing: '2px' }}
-                            >
-                              FREE
-                            </span>
-                            <span className="text-base font-bold text-red-600">-</span>
-                            <span className="text-base font-bold text-red-600">
-                              ${DELIVERY_FEE.toFixed(2)}
-                            </span>
-                          </span>
-                        </span>
-                      </>
+                    {selectedDeliveryOption === 'pickup' ? (
+                      <>${shipping.toFixed(2)}</>
                     ) : (
                       <>${shipping.toFixed(2)}</>
                     )}
                   </span>
                 </div>
-                {subtotal < FREE_SHIPPING_THRESHOLD && (
-                  <span className="animate-fade-in mt-2 mb-2 flex w-full items-center overflow-hidden rounded-full border border-blue-100 bg-gradient-to-r from-blue-50 via-green-50 to-pink-50 px-4 py-2 whitespace-nowrap shadow md:hidden">
-                    <span className="mr-1 animate-bounce text-lg leading-tight font-extrabold text-green-600 md:text-xl">
-                      ${subtotal}
-                    </span>
-                    <span
-                      className="ml-1 align-middle text-base font-medium text-gray-500 md:text-lg"
-                      style={{ fontWeight: 500 }}
-                    >
-                      away from <span className="font-bold text-green-600">FREE delivery!</span>
-                    </span>
-                  </span>
-                )}
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-gray-700">
                     Service Fee{' '}
@@ -973,7 +1057,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* Place Order Button */}
-          {!isAddressComplete(shippingAddress) && (
+          {selectedDeliveryOption === 'delivery' && !isAddressComplete(shippingAddress) && (
             <div className="mb-2 w-full text-center font-semibold text-red-600">
               Please enter and save a complete shipping address to place your order.
             </div>
@@ -990,7 +1074,9 @@ export default function CheckoutPage() {
               className="flex-1 rounded-2xl bg-gradient-to-r from-blue-500 to-pink-400 px-8 py-4 text-xl font-extrabold text-white shadow-xl transition-all hover:from-blue-600 hover:to-pink-500 focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:outline-none"
               onClick={handlePlaceOrder}
               disabled={
-                cartItems.length === 0 || !isAddressComplete(shippingAddress) || isEditingAddress
+                cartItems.length === 0 || 
+                (selectedDeliveryOption === 'delivery' && !isAddressComplete(shippingAddress)) || 
+                isEditingAddress
               }
               type="button"
             >

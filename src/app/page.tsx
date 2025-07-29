@@ -3,9 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRightIcon } from '@heroicons/react/20/solid';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Product } from '@/types';
+import { Product, Category } from '@/types';
 import Image from 'next/image';
 import {
   FaBoxOpen,
@@ -17,35 +17,16 @@ import {
   FaBriefcase,
 } from 'react-icons/fa';
 
-const categories = [
-  {
-    name: 'School Supplies',
-    description: 'Everything your student needs for academic success.',
-    href: '/products?category=school-supplies',
-    icon: <FaSchool className="mx-auto mb-2 text-3xl text-blue-400" />,
-  },
-  {
-    name: 'Art & Craft',
-    description: 'Unleash your creativity with our diverse art supplies.',
-    href: '/products?category=art-craft',
-    icon: <FaPaintBrush className="mx-auto mb-2 text-3xl text-pink-400" />,
-  },
-  {
-    name: 'Office Supplies',
-    description: 'Boost productivity with essential office stationery.',
-    href: '/products?category=office-supplies',
-    icon: <FaBriefcase className="mx-auto mb-2 text-3xl text-yellow-500" />,
-  },
-];
-
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
+        // Fetch products
         const productsCollectionRef = collection(db, 'products');
         const q = query(productsCollectionRef, orderBy('createdAt', 'desc'), limit(8));
         const querySnapshot = await getDocs(q);
@@ -54,14 +35,38 @@ export default function HomePage() {
           ...doc.data(),
         })) as Product[];
         setProducts(productsList);
+
+        // Fetch categories
+        const categoriesQuery = query(collection(db, 'categories'), where('isGlobal', '==', true));
+        const categoriesSnapshot = await getDocs(categoriesQuery);
+        const categoriesList = categoriesSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Category[];
+        setCategories(categoriesList);
       } catch (err) {
-        // Optionally handle error
+        console.error('Error fetching data:', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchProducts();
+    fetchData();
   }, []);
+
+  const getIconComponent = (iconName: string) => {
+    const iconMap: { [key: string]: React.ReactNode } = {
+      'tag': <FaBoxOpen className="mx-auto mb-2 text-3xl text-gray-400" />,
+      'laptop': <FaBoxOpen className="mx-auto mb-2 text-3xl text-blue-400" />,
+      'couch': <FaBoxOpen className="mx-auto mb-2 text-3xl text-purple-400" />,
+      'tshirt': <FaBoxOpen className="mx-auto mb-2 text-3xl text-pink-400" />,
+      'book': <FaSchool className="mx-auto mb-2 text-3xl text-green-400" />,
+      'basketball-ball': <FaBoxOpen className="mx-auto mb-2 text-3xl text-orange-400" />,
+      'home': <FaBoxOpen className="mx-auto mb-2 text-3xl text-red-400" />,
+      'gamepad': <FaBoxOpen className="mx-auto mb-2 text-3xl text-cyan-400" />,
+      'car': <FaBoxOpen className="mx-auto mb-2 text-3xl text-lime-400" />,
+    };
+    return iconMap[iconName] || <FaBoxOpen className="mx-auto mb-2 text-3xl text-gray-400" />;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50">
@@ -76,10 +81,10 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="mx-auto max-w-2xl text-center">
               <h1 className="text-4xl font-bold tracking-tight text-white drop-shadow-xl sm:text-6xl">
-                Your One-Stop Stationery Shop
+                Your One-Stop Global Marketplace
               </h1>
               <p className="mt-6 text-lg leading-8 text-gray-300">
-                Connect with local stationery shops and find all your school supplies in one place.
+                Connect with local and international shops and find everything you need in one place.
                 Quality products, competitive prices, and convenient delivery.
               </p>
               <div className="mt-10 flex items-center justify-center gap-x-6">
@@ -116,100 +121,164 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="mt-6 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:gap-x-8">
-              {categories.map((category) => (
-                <Link
-                  key={category.name}
-                  href={category.href}
-                  className="group relative rounded-2xl border border-transparent bg-white/80 text-center shadow-lg transition-all duration-200 hover:scale-105 hover:border-blue-300 hover:shadow-2xl"
-                >
-                  <div className="flex h-40 flex-col items-center justify-center">
-                    {category.icon}
-                    <h3 className="mb-1 text-lg font-bold text-gray-800 group-hover:text-blue-600">
-                      {category.name}
-                    </h3>
-                    <p className="mt-1 text-sm text-gray-500 group-hover:text-gray-700">
-                      {category.description}
-                    </p>
+              {loading ? (
+                // Loading skeleton
+                Array.from({ length: 6 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="group relative rounded-2xl border border-transparent bg-white/80 text-center shadow-lg animate-pulse"
+                  >
+                    <div className="flex h-40 flex-col items-center justify-center">
+                      <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-gray-200"></div>
+                      <div className="mb-1 h-6 w-24 rounded bg-gray-200"></div>
+                      <div className="mt-1 h-4 w-32 rounded bg-gray-200"></div>
+                    </div>
                   </div>
-                </Link>
-              ))}
+                ))
+              ) : categories.length > 0 ? (
+                categories.slice(0, 6).map((category) => (
+                  <Link
+                    key={category.id}
+                    href={`/products?category=${encodeURIComponent(category.name)}`}
+                    className="group relative rounded-2xl border border-transparent bg-white/80 text-center shadow-lg transition-all duration-200 hover:scale-105 hover:border-blue-300 hover:shadow-2xl"
+                  >
+                    <div className="flex h-40 flex-col items-center justify-center">
+                      <div
+                        className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg text-3xl"
+                        style={{ backgroundColor: `${category.color}20` }}
+                      >
+                        {getIconComponent(category.icon)}
+                      </div>
+                      <h3 className="mb-1 text-lg font-bold text-gray-800 group-hover:text-blue-600">
+                        {category.name}
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-500 group-hover:text-gray-700">
+                        {category.description}
+                      </p>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                // Fallback categories if no categories are found
+                [
+                  {
+                    name: 'Electronics',
+                    description: 'Electronic devices and accessories',
+                    icon: 'laptop',
+                    color: '#3B82F6',
+                  },
+                  {
+                    name: 'Furniture',
+                    description: 'Home and office furniture',
+                    icon: 'couch',
+                    color: '#8B5CF6',
+                  },
+                  {
+                    name: 'Clothing',
+                    description: 'Apparel and fashion items',
+                    icon: 'tshirt',
+                    color: '#EC4899',
+                  },
+                ].map((category, index) => (
+                  <Link
+                    key={index}
+                    href={`/products?category=${encodeURIComponent(category.name)}`}
+                    className="group relative rounded-2xl border border-transparent bg-white/80 text-center shadow-lg transition-all duration-200 hover:scale-105 hover:border-blue-300 hover:shadow-2xl"
+                  >
+                    <div className="flex h-40 flex-col items-center justify-center">
+                      <div
+                        className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg text-3xl"
+                        style={{ backgroundColor: `${category.color}20` }}
+                      >
+                        {getIconComponent(category.icon)}
+                      </div>
+                      <h3 className="mb-1 text-lg font-bold text-gray-800 group-hover:text-blue-600">
+                        {category.name}
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-500 group-hover:text-gray-700">
+                        {category.description}
+                      </p>
+                    </div>
+                  </Link>
+                ))
+              )}
             </div>
           </div>
         </div>
 
         {/* Featured products section */}
-        <div className="bg-transparent">
+        <div className="bg-white/50">
           <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-            <div className="mb-6 sm:flex sm:items-baseline sm:justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Featured Products</h2>
+            <div className="sm:flex sm:items-baseline sm:justify-between">
+              <h2 className="mb-6 text-center text-2xl font-bold text-gray-900">
+                Featured Products
+              </h2>
               <Link
                 href="/products"
                 className="hidden text-sm font-semibold text-blue-600 hover:text-blue-500 sm:block"
               >
-                View All Products
+                View all products
                 <span aria-hidden="true"> &rarr;</span>
               </Link>
             </div>
             {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <span className="text-lg text-gray-500">Loading products...</span>
+              <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <div key={index} className="animate-pulse">
+                    <div className="aspect-h-1 aspect-w-1 w-full overflow-hidden rounded-lg bg-gray-200"></div>
+                    <div className="mt-4 space-y-2">
+                      <div className="h-4 bg-gray-200 rounded"></div>
+                      <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : products.length > 0 ? (
+              <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8">
+                {products.map((product) => (
+                  <Link
+                    key={product.id}
+                    href={`/products/${product.id}`}
+                    className="group relative rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-lg"
+                  >
+                    <div className="aspect-h-1 aspect-w-1 w-full overflow-hidden rounded-lg bg-gray-200 group-hover:opacity-75">
+                      {product.images && product.images.length > 0 ? (
+                        <Image
+                          src={product.images[0]}
+                          alt={product.name}
+                          width={300}
+                          height={300}
+                          className="h-full w-full object-cover object-center"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-gray-100">
+                          <FaBoxOpen className="h-12 w-12 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-grow flex-col justify-between p-5">
+                      <h2 className="mb-1 truncate text-lg font-bold text-gray-800">
+                        {product.name}
+                      </h2>
+                      <p className="mb-3 line-clamp-2 flex items-center gap-1 text-sm text-gray-600">
+                        {product.description}
+                      </p>
+                      <div className="mt-auto flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-xs text-gray-500">
+                          <FaBoxOpen className="inline" /> Stock: {product.stock}
+                        </span>
+                        {/* Add to Cart button on hover */}
+                        <button className="flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-400 to-pink-400 px-3 py-1 text-white opacity-0 shadow transition-opacity duration-200 group-hover:opacity-100 hover:scale-105">
+                          <FaShoppingCart /> Add to Cart
+                        </button>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
               </div>
             ) : (
-              <div className="mt-6 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8">
-                {products.length === 0 ? (
-                  <div className="col-span-full text-center text-gray-500">No products found.</div>
-                ) : (
-                  products.map((product) => (
-                    <Link href={`/products/${product.id}`} key={product.id} className="group">
-                      <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white/80 shadow-xl backdrop-blur transition-shadow duration-200 group-hover:scale-[1.03] group-hover:border-blue-300 group-hover:ring-2 group-hover:ring-blue-100 hover:shadow-2xl">
-                        <div className="relative flex h-48 w-full items-center justify-center bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200">
-                          {product.images && product.images.length > 0 ? (
-                            <Image
-                              src={product.images[0]}
-                              alt={product.name}
-                              fill
-                              style={{ objectFit: 'cover' }}
-                              className="rounded-b-none transition-transform duration-200 hover:scale-105"
-                            />
-                          ) : (
-                            <span className="flex flex-col items-center text-gray-400">
-                              <FaBoxOpen className="mb-2 text-4xl" />
-                              No Image
-                            </span>
-                          )}
-                          {/* Stock badge */}
-                          <span
-                            className={`absolute top-2 left-2 flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold shadow ${product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}
-                          >
-                            {product.stock > 0 ? <FaCheckCircle /> : <FaTimesCircle />}{' '}
-                            {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                          </span>
-                          {/* Price badge */}
-                          <span className="absolute top-2 right-2 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 px-3 py-1 text-sm font-bold text-white shadow">
-                            ₹{product.price.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex flex-grow flex-col justify-between p-5">
-                          <h2 className="mb-1 truncate text-lg font-bold text-gray-800">
-                            {product.name}
-                          </h2>
-                          <p className="mb-3 line-clamp-2 flex items-center gap-1 text-sm text-gray-600">
-                            {product.description}
-                          </p>
-                          <div className="mt-auto flex items-center justify-between">
-                            <span className="flex items-center gap-1 text-xs text-gray-500">
-                              <FaBoxOpen className="inline" /> Stock: {product.stock}
-                            </span>
-                            {/* Add to Cart button on hover */}
-                            <button className="flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-400 to-pink-400 px-3 py-1 text-white opacity-0 shadow transition-opacity duration-200 group-hover:opacity-100 hover:scale-105">
-                              <FaShoppingCart /> Add to Cart
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))
-                )}
+              <div className="text-center py-12">
+                <p className="text-gray-500">No products available yet.</p>
               </div>
             )}
             <div className="mt-10 flex justify-center">

@@ -26,7 +26,7 @@ import { UserRole, Notification } from '@/types';
 import { toast } from 'react-hot-toast';
 import { Menu, Transition } from '@headlessui/react';
 import { useCart } from '@/context/CartContext';
-import { collection, query, where, getDocs, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, updateDoc, doc, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 const navigation = [
@@ -130,27 +130,53 @@ export default function Header() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     if (user) {
-      const q = query(collection(db, 'notifications'), where('userId', '==', user.uid));
+      const q = query(
+        collection(db, 'notifications'), 
+        where('userId', '==', user.uid),
+        orderBy('createdAt', 'desc')
+      );
       unsubscribe = onSnapshot(q, (snapshot) => {
         const notifs = snapshot.docs.map((doc) => {
           const data = doc.data();
+          let createdAt: Date;
+          
+          // Handle different date formats
+          if (data.createdAt && typeof data.createdAt === 'object' && data.createdAt.toDate) {
+            // Firestore Timestamp
+            createdAt = data.createdAt.toDate();
+          } else if (data.createdAt instanceof Date) {
+            // Already a Date object
+            createdAt = data.createdAt;
+          } else if (data.createdAt && typeof data.createdAt === 'string') {
+            // ISO string
+            createdAt = new Date(data.createdAt);
+          } else if (data.createdAt && typeof data.createdAt === 'number') {
+            // Timestamp number
+            createdAt = new Date(data.createdAt);
+          } else {
+            // Fallback to current date
+            createdAt = new Date();
+          }
+          
           return {
             id: doc.id,
             userId: data.userId,
             type: data.type,
             message: data.message,
-            createdAt: data.createdAt,
+            createdAt: createdAt,
             read: data.read,
             data: data.data,
             link: data.link,
             linkLabel: data.linkLabel,
           } as Notification;
         });
-        notifs.sort((a, b) =>
-          a.createdAt && b.createdAt && a.createdAt instanceof Date && b.createdAt instanceof Date
-            ? b.createdAt.getTime() - a.createdAt.getTime()
-            : 0
-        );
+        
+        // Additional client-side sorting to ensure proper order
+        notifs.sort((a, b) => {
+          if (!a.createdAt || !b.createdAt) return 0;
+          return b.createdAt.getTime() - a.createdAt.getTime();
+        });
+        
         setNotifications(notifs);
         setUnreadCount(notifs.filter((n) => !n.read).length);
       });
@@ -242,21 +268,120 @@ export default function Header() {
         return <ExclamationTriangleIcon className="h-5 w-5 text-blue-500" />;
       case 'account_created':
         return <UserPlusIcon className="h-5 w-5 text-purple-500" />;
+      case 'support_ticket_created':
+        return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
+      case 'support_message':
+        return <InformationCircleIcon className="h-5 w-5 text-blue-500" />;
+      case 'support_admin_response':
+        return <ExclamationTriangleIcon className="h-5 w-5 text-purple-500" />;
+      case 'support_status_update':
+        return <ExclamationTriangleIcon className="h-5 w-5 text-orange-500" />;
+      case 'support_ticket_reopened':
+        return <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />;
+      case 'support_ticket_closed':
+        return <CheckCircleIcon className="h-5 w-5 text-gray-500" />;
       default:
         return <InformationCircleIcon className="h-5 w-5 text-gray-500" />;
     }
   };
 
-  const getNotificationColor = (type: string) => {
-    switch (type) {
-      case 'order_placed':
-        return 'border-l-green-500 bg-green-50';
-      case 'order_status_update':
-        return 'border-l-blue-500 bg-blue-50';
-      case 'account_created':
-        return 'border-l-purple-500 bg-purple-50';
-      default:
-        return 'border-l-gray-500 bg-gray-50';
+  const getNotificationBackground = (type: string, isUnread: boolean) => {
+    if (isUnread) {
+      switch (type) {
+        case 'order_placed':
+          return 'bg-blue-50';
+        case 'order_status_update':
+          return 'bg-yellow-50';
+        case 'account_created':
+          return 'bg-purple-50';
+        case 'support_ticket_created':
+          return 'bg-green-50';
+        case 'support_message':
+          return 'bg-blue-50';
+        case 'support_admin_response':
+          return 'bg-purple-50';
+        case 'support_status_update':
+          return 'bg-orange-50';
+        case 'support_ticket_reopened':
+          return 'bg-yellow-50';
+        case 'support_ticket_closed':
+          return 'bg-gray-50';
+        default:
+          return 'bg-blue-50'; // Default for unread
+      }
+    } else {
+      switch (type) {
+        case 'order_placed':
+          return 'bg-blue-100';
+        case 'order_status_update':
+          return 'bg-yellow-100';
+        case 'account_created':
+          return 'bg-purple-100';
+        case 'support_ticket_created':
+          return 'bg-green-100';
+        case 'support_message':
+          return 'bg-blue-100';
+        case 'support_admin_response':
+          return 'bg-purple-100';
+        case 'support_status_update':
+          return 'bg-orange-100';
+        case 'support_ticket_reopened':
+          return 'bg-yellow-100';
+        case 'support_ticket_closed':
+          return 'bg-gray-100';
+        default:
+          return 'bg-blue-100'; // Default for read
+      }
+    }
+  };
+
+  const getNotificationBorderColor = (type: string, isUnread: boolean) => {
+    if (isUnread) {
+      switch (type) {
+        case 'order_placed':
+          return 'bg-blue-500';
+        case 'order_status_update':
+          return 'bg-yellow-500';
+        case 'account_created':
+          return 'bg-purple-500';
+        case 'support_ticket_created':
+          return 'bg-green-500';
+        case 'support_message':
+          return 'bg-blue-500';
+        case 'support_admin_response':
+          return 'bg-purple-500';
+        case 'support_status_update':
+          return 'bg-orange-500';
+        case 'support_ticket_reopened':
+          return 'bg-yellow-500';
+        case 'support_ticket_closed':
+          return 'bg-gray-500';
+        default:
+          return 'bg-blue-500'; // Default for unread
+      }
+    } else {
+      switch (type) {
+        case 'order_placed':
+          return 'bg-blue-400';
+        case 'order_status_update':
+          return 'bg-yellow-400';
+        case 'account_created':
+          return 'bg-purple-400';
+        case 'support_ticket_created':
+          return 'bg-green-400';
+        case 'support_message':
+          return 'bg-blue-400';
+        case 'support_admin_response':
+          return 'bg-purple-400';
+        case 'support_status_update':
+          return 'bg-orange-400';
+        case 'support_ticket_reopened':
+          return 'bg-yellow-400';
+        case 'support_ticket_closed':
+          return 'bg-gray-400';
+        default:
+          return 'bg-blue-400'; // Default for read
+      }
     }
   };
 
@@ -304,7 +429,7 @@ export default function Header() {
             </svg>
           </span>
           <span className="text-3xl font-extrabold tracking-tight text-gray-900 drop-shadow-lg">
-            Swift Stationery
+            Swift Marketplace
           </span>
         </Link>
         {/* Divider after logo */}
@@ -317,9 +442,9 @@ export default function Header() {
               href={item.href}
               className={`relative flex items-center gap-2 rounded-full px-6 py-4 text-lg font-semibold transition-all duration-200 ${
                 pathname === item.href
-                  ? 'animate-glow-menu scale-105 bg-gradient-to-r from-blue-500 to-pink-400 text-white shadow-xl ring-2 ring-pink-200'
-                  : 'text-gray-900 hover:scale-105 hover:bg-gray-100 hover:text-blue-700 hover:shadow-lg'
-              } `}
+                  ? 'scale-105 bg-gradient-to-r from-blue-500 to-pink-400 text-white shadow-xl ring-2 ring-pink-200'
+                  : 'bg-white/80 text-gray-700 hover:bg-white hover:text-gray-900 hover:shadow-lg'
+              }`}
               style={{ minWidth: '140px' }}
             >
               <item.icon
@@ -327,7 +452,7 @@ export default function Header() {
               />
               <span className="drop-shadow-lg">{item.name}</span>
               {pathname === item.href && (
-                <span className="animate-underline absolute -bottom-1 left-1/2 h-1 w-2/3 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-200 to-pink-200 shadow-lg" />
+                <span className="absolute -bottom-1 left-1/2 h-1 w-2/3 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-200 to-pink-200 shadow-lg" />
               )}
             </Link>
           ))}
@@ -383,12 +508,14 @@ export default function Header() {
                           <div
                             key={notif.id}
                             className={`group relative border-b border-gray-100 px-4 py-3 transition-all duration-200 hover:bg-gray-50 ${
-                              !notif.read ? 'bg-blue-50/50' : ''
+                              !notif.read 
+                                ? getNotificationBackground(notif.type, true) 
+                                : getNotificationBackground(notif.type, false)
                             }`}
                           >
                             {/* Unread indicator */}
                             {!notif.read && (
-                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-r-full" />
+                              <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-r-full ${getNotificationBorderColor(notif.type, true)}`} />
                             )}
                             
                             <div className="flex items-start gap-3">
@@ -405,36 +532,65 @@ export default function Header() {
                                     className="block group-hover:bg-gray-100 rounded-lg p-2 -m-2 transition-colors duration-200"
                                     onClick={() => setNotifOpen(false)}
                                   >
-                                    <p className="text-sm font-medium text-gray-900 leading-relaxed">
+                                    <p className={`text-sm font-medium leading-relaxed ${
+                                      !notif.read ? 'text-gray-900' : 'text-gray-700'
+                                    }`}>
                                       {notif.message}
                                     </p>
                                     {notif.linkLabel && (
                                       <div className="flex items-center gap-1 mt-1">
-                                        <span className="text-xs text-blue-600 font-medium">
+                                        <span className={`text-xs font-medium ${
+                                          !notif.read ? 'text-blue-600' : 'text-blue-500'
+                                        }`}>
                                           {notif.linkLabel}
                                         </span>
-                                        <svg className="h-3 w-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg className={`h-3 w-3 ${
+                                          !notif.read ? 'text-blue-600' : 'text-blue-500'
+                                        }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                         </svg>
                                       </div>
                                     )}
                                   </Link>
                                 ) : (
-                                  <p className="text-sm font-medium text-gray-900 leading-relaxed">
+                                  <p className={`text-sm font-medium leading-relaxed ${
+                                    !notif.read ? 'text-gray-900' : 'text-gray-700'
+                                  }`}>
                                     {notif.message}
                                   </p>
                                 )}
                                 
                                 {/* Timestamp */}
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className={`text-xs mt-1 ${
+                                  !notif.read ? 'text-gray-600' : 'text-gray-500'
+                                }`}>
                                   {notif.createdAt instanceof Date
-                                    ? notif.createdAt.toLocaleString('en-US', {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        hour: 'numeric',
-                                        minute: '2-digit',
-                                        hour12: true
-                                      })
+                                    ? (() => {
+                                        const now = new Date();
+                                        const diffInMs = now.getTime() - notif.createdAt.getTime();
+                                        const diffInHours = diffInMs / (1000 * 60 * 60);
+                                        const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+                                        
+                                        if (diffInDays >= 1) {
+                                          // Show date for older notifications
+                                          return notif.createdAt.toLocaleDateString('en-US', {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            year: diffInDays >= 365 ? 'numeric' : undefined
+                                          });
+                                        } else if (diffInHours >= 1) {
+                                          // Show hours ago
+                                          const hours = Math.floor(diffInHours);
+                                          return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+                                        } else {
+                                          // Show minutes ago
+                                          const minutes = Math.floor(diffInMs / (1000 * 60));
+                                          if (minutes < 1) {
+                                            return 'Just now';
+                                          }
+                                          return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+                                        }
+                                      })()
                                     : ''}
                                 </p>
                               </div>
@@ -466,7 +622,7 @@ export default function Header() {
                   Cart
                 </span>
                 {cartItems.length > 0 && (
-                  <span className="animate-fade-in absolute -top-2 -right-2 rounded-full border-2 border-white bg-gradient-to-r from-pink-400 to-blue-400 px-2 py-0.5 text-xs font-bold text-white shadow-lg">
+                  <span className="absolute -top-2 -right-2 rounded-full border-2 border-white bg-gradient-to-r from-pink-400 to-blue-400 px-2 py-0.5 text-xs font-bold text-white shadow-lg">
                     {cartItems.length}
                   </span>
                 )}
@@ -503,7 +659,7 @@ export default function Header() {
               {isProfileMenuOpen && (
                 <div
                   key={isProfileMenuOpen ? 'open' : 'closed'}
-                  className="ring-opacity-5 animate-fade-in absolute right-0 z-50 mt-2 max-h-60 w-56 overflow-y-auto rounded-2xl bg-white/90 py-2 shadow-xl ring-1 ring-black focus:outline-none"
+                  className="ring-opacity-5 absolute right-0 z-50 mt-2 max-h-60 w-56 overflow-y-auto rounded-2xl bg-white/90 py-2 shadow-xl ring-1 ring-black focus:outline-none"
                 >
                   <Link
                     href="/account"
@@ -521,7 +677,7 @@ export default function Header() {
                       <UserIcon className="mr-2 h-5 w-5 text-blue-500" /> Orders
                       {pendingOrderCount > 0 && (
                         <span
-                          className="animate-fade-in absolute top-2 right-4 ml-2 rounded-full border-2 border-white px-2.5 py-0.5 text-xs font-bold text-white shadow-lg select-none"
+                          className="absolute top-2 right-4 ml-2 rounded-full border-2 border-white px-2.5 py-0.5 text-xs font-bold text-white shadow-lg select-none"
                           style={{
                             background: 'linear-gradient(90deg, #3B82F6 60%, #60A5FA 100%)',
                             boxShadow: '0 2px 8px 0 rgba(59,130,246,0.15)',
@@ -553,7 +709,7 @@ export default function Header() {
                       Support Tickets
                       {openSupportCount > 0 && (
                         <span
-                          className="animate-fade-in absolute top-2 right-4 ml-2 rounded-full border-2 border-white px-2.5 py-0.5 text-xs font-bold text-white shadow-lg select-none"
+                          className="absolute top-2 right-4 ml-2 rounded-full border-2 border-white px-2.5 py-0.5 text-xs font-bold text-white shadow-lg select-none"
                           style={{
                             background: 'linear-gradient(90deg, #EC4899 60%, #F472B6 100%)',
                             boxShadow: '0 2px 8px 0 rgba(236,72,153,0.15)',
