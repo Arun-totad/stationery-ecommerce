@@ -21,7 +21,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 async function syncVendorProducts() {
-  console.log('Starting vendor products sync...');
+  // console.log('Starting vendor products sync...');
 
   try {
     // Get all vendors
@@ -32,11 +32,11 @@ async function syncVendorProducts() {
       uid: doc.id,
     }));
 
-    console.log(`Found ${vendors.length} vendors`);
+    // console.log(`Found ${vendors.length} vendors`);
 
     // Process each vendor
     for (const vendor of vendors) {
-      console.log(`\nProcessing vendor: ${vendor.displayName || vendor.email} (${vendor.uid})`);
+      // console.log(`\nProcessing vendor: ${vendor.displayName || vendor.email} (${vendor.uid})`);
 
       // Get all products for this vendor
       const productsQuery = query(collection(db, 'products'), where('vendorId', '==', vendor.uid));
@@ -46,7 +46,7 @@ async function syncVendorProducts() {
         ...doc.data(),
       })) as Product[];
 
-      console.log(`Found ${products.length} products for vendor`);
+      // console.log(`Found ${products.length} products for vendor`);
 
       // Get current products array from vendor
       const currentProducts = vendor.products || [];
@@ -57,12 +57,12 @@ async function syncVendorProducts() {
       const productsToRemove = currentProducts.filter((id) => !productIds.includes(id));
 
       if (productsToAdd.length === 0 && productsToRemove.length === 0) {
-        console.log('No changes needed for this vendor');
+        // console.log('No changes needed for this vendor');
         continue;
       }
 
-      console.log(`Products to add: ${productsToAdd.length}`);
-      console.log(`Products to remove: ${productsToRemove.length}`);
+      // console.log(`Products to add: ${productsToAdd.length}`);
+      // console.log(`Products to remove: ${productsToRemove.length}`);
 
       // Update vendor's products array
       const batch = writeBatch(db);
@@ -77,10 +77,10 @@ async function syncVendorProducts() {
       batch.update(vendorRef, { products: updatedProducts });
       await batch.commit();
 
-      console.log('Updated vendor products array successfully');
+      // console.log('Updated vendor products array successfully');
     }
 
-    console.log('\nVendor products sync completed successfully!');
+    // console.log('\nVendor products sync completed successfully!');
   } catch (error) {
     console.error('Error syncing vendor products:', error);
     process.exit(1);

@@ -57,7 +57,7 @@ async function getNextOrderNumber(firestoreDb: Firestore): Promise<number> {
 }
 
 async function backfillOrderNumbers() {
-  console.log('Starting backfill of order numbers...');
+  // console.log('Starting backfill of order numbers...');
 
   try {
     // 1. Fetch orders without an orderNumber
@@ -66,11 +66,11 @@ async function backfillOrderNumbers() {
     const querySnapshot = await q.get(); // Use q.get()
 
     if (querySnapshot.empty) {
-      console.log('No orders found without an orderNumber. Exiting.');
+      // console.log('No orders found without an orderNumber. Exiting.');
       return;
     }
 
-    console.log(`Found ${querySnapshot.docs.length} orders to backfill.`);
+    // console.log(`Found ${querySnapshot.docs.length} orders to backfill.`);
 
     const updates: Promise<void>[] = [];
     let lastAssignedOrderNumber = 0;
@@ -81,9 +81,9 @@ async function backfillOrderNumbers() {
       const counterDoc = await transaction.get(counterRef);
       if (counterDoc.exists) {
         lastAssignedOrderNumber = counterDoc.data()?.current || 0;
-        console.log(`Initial counter value: ${lastAssignedOrderNumber}`);
+        // console.log(`Initial counter value: ${lastAssignedOrderNumber}`);
       } else {
-        console.log('Order counter document not found. Will initialize.');
+        // console.log('Order counter document not found. Will initialize.');
         lastAssignedOrderNumber = 0;
       }
     });
@@ -105,7 +105,7 @@ async function backfillOrderNumbers() {
     for (const orderDoc of ordersToUpdate) {
       lastAssignedOrderNumber++;
       const orderRef = db.doc(`orders/${orderDoc.id}`); // Use db.doc
-      console.log(`Assigning order #${lastAssignedOrderNumber} to order ID: ${orderDoc.id}`);
+      // console.log(`Assigning order #${lastAssignedOrderNumber} to order ID: ${orderDoc.id}`);
       updates.push(
         db.runTransaction(async (transaction: Transaction) => {
           transaction.update(orderRef, { orderNumber: lastAssignedOrderNumber });
@@ -124,10 +124,10 @@ async function backfillOrderNumbers() {
       } else {
         transaction.set(counterRef, { current: lastAssignedOrderNumber });
       }
-      console.log(`Order counter updated to: ${lastAssignedOrderNumber}`);
+      // console.log(`Order counter updated to: ${lastAssignedOrderNumber}`);
     });
 
-    console.log('Order number backfill completed successfully!');
+    // console.log('Order number backfill completed successfully!');
   } catch (error) {
     console.error('Error during backfill process:', error);
   }

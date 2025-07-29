@@ -66,8 +66,8 @@ export default function VendorOrderDetailPage() {
               : undefined,
         } as Order);
         // Debug log: order vendorId and current user
-        console.log('Current user UID:', user?.uid);
-        console.log('Order vendorId:', orderData.vendorId);
+        // console.log('Current user UID:', user?.uid);
+        // console.log('Order vendorId:', orderData.vendorId);
         // Fetch customer name
         if (orderData.userId) {
           const userRef = doc(db, 'users', orderData.userId);
@@ -80,7 +80,7 @@ export default function VendorOrderDetailPage() {
         }
       }
       // Debug log: orderId being queried
-      console.log('Vendor OrderId (query):', orderId);
+      // console.log('Vendor OrderId (query):', orderId);
       // Fetch support tickets for this order
       const ticketsQuery = query(
         collection(db, 'supportTickets'),
@@ -90,7 +90,8 @@ export default function VendorOrderDetailPage() {
       const fetchedTickets: SupportTicket[] = [];
       ticketsSnap.forEach((docSnap) => {
         const ticketData = docSnap.data();
-        console.log('Ticket doc:', docSnap.id, ticketData); // Debug log
+        // Debug log: ticket doc
+        // console.log('Ticket doc:', docSnap.id, ticketData);
         fetchedTickets.push({
           id: docSnap.id,
           ...ticketData,
@@ -107,7 +108,7 @@ export default function VendorOrderDetailPage() {
         } as SupportTicket);
       });
       // Debug log: fetched tickets
-      console.log('Fetched Tickets:', fetchedTickets);
+      // console.log('Fetched Tickets:', fetchedTickets);
       setTickets(fetchedTickets);
     } catch (error) {
       // handle error
@@ -167,12 +168,12 @@ export default function VendorOrderDetailPage() {
         allTickets.push({ id: docSnap.id, orderId: data.orderId, ...data });
       });
       setDebugTickets(allTickets);
-      console.log(
-        'All support tickets visible to this vendor:',
-        allTickets.map((t) => ({ id: t.id, orderId: t.orderId }))
-      );
+      // console.log(
+      //   'All support tickets visible to this vendor:',
+      //   allTickets.map((t) => ({ id: t.id, orderId: t.orderId }))
+      // );
     } catch (err) {
-      console.error('Error fetching all tickets for debug:', err);
+      // console.error('Error fetching all tickets for debug:', err);
     }
   };
 
@@ -219,7 +220,7 @@ export default function VendorOrderDetailPage() {
     );
   }
 
-  console.log('Tickets state at render:', tickets);
+  // console.log('Tickets state at render:', tickets);
 
   return (
     <>

@@ -15,6 +15,10 @@ import {
   LifebuoyIcon,
   HomeIcon,
   BellIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
+  UserPlusIcon,
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -230,6 +234,32 @@ export default function Header() {
     }
   };
 
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'order_placed':
+        return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
+      case 'order_status_update':
+        return <ExclamationTriangleIcon className="h-5 w-5 text-blue-500" />;
+      case 'account_created':
+        return <UserPlusIcon className="h-5 w-5 text-purple-500" />;
+      default:
+        return <InformationCircleIcon className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
+  const getNotificationColor = (type: string) => {
+    switch (type) {
+      case 'order_placed':
+        return 'border-l-green-500 bg-green-50';
+      case 'order_status_update':
+        return 'border-l-blue-500 bg-blue-50';
+      case 'account_created':
+        return 'border-l-purple-500 bg-purple-50';
+      default:
+        return 'border-l-gray-500 bg-gray-50';
+    }
+  };
+
   const isAdminPage =
     pathname.startsWith('/admin') && (userRole === 'admin' || userRole === 'admin-manager');
   const isVendorPage = pathname.startsWith('/vendor');
@@ -260,7 +290,7 @@ export default function Header() {
   return (
     <header className="border-opacity-40 sticky top-0 z-50 border-b border-white/60 bg-white/60 shadow-xl backdrop-blur-xl">
       <nav
-        className="relative container mx-auto flex h-24 flex-wrap items-center px-4"
+        className="relative container mx-auto flex h-24 flex-wrap items-center px-4 justify-between"
         style={{ zIndex: 2 }}
       >
         {/* Logo */}
@@ -326,38 +356,103 @@ export default function Header() {
                 {notifOpen && (
                   <div
                     ref={notifDropdownRef}
-                    className="absolute right-0 z-50 mt-2 max-h-96 w-80 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg"
+                    className="absolute right-0 z-50 mt-2 w-96 max-h-[500px] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl"
                   >
-                    <div className="border-b p-4 font-semibold">Notifications</div>
-                    {notifications.length === 0 ? (
-                      <div className="p-4 text-gray-500">No notifications yet.</div>
-                    ) : (
-                      notifications.map((notif) => (
-                        <div
-                          key={notif.id}
-                          className={`border-b p-4 last:border-b-0 ${!notif.read ? 'bg-blue-50' : ''}`}
-                        >
-                          {notif.link ? (
-                            <Link href={notif.link} className="font-medium text-blue-600 hover:underline" onClick={() => setNotifOpen(false)}>
-                              {notif.message} {notif.linkLabel ? <span className="ml-1">→ {notif.linkLabel}</span> : null}
-                            </Link>
-                          ) : (
-                            <div className="font-medium">{notif.message}</div>
-                          )}
-                          <div className="mt-1 text-xs text-gray-500">
-                            {notif.createdAt instanceof Date
-                              ? notif.createdAt.toLocaleString()
-                              : ''}
-                          </div>
+                    {/* Header */}
+                    <div className="border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50 px-4 py-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+                        {unreadCount > 0 && (
+                          <span className="inline-flex items-center justify-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
+                            {unreadCount} new
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Notifications List */}
+                    <div className="max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                      {notifications.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
+                          <BellIcon className="h-8 w-8 text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-500">No notifications yet</p>
+                          <p className="text-xs text-gray-400 mt-1">We'll notify you about your orders and updates</p>
                         </div>
-                      ))
-                    )}
-                    <button
-                      className="w-full py-2 text-center text-blue-600 hover:underline"
-                      onClick={() => setNotifOpen(false)}
-                    >
-                      Close
-                    </button>
+                      ) : (
+                        notifications.map((notif) => (
+                          <div
+                            key={notif.id}
+                            className={`group relative border-b border-gray-100 px-4 py-3 transition-all duration-200 hover:bg-gray-50 ${
+                              !notif.read ? 'bg-blue-50/50' : ''
+                            }`}
+                          >
+                            {/* Unread indicator */}
+                            {!notif.read && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-r-full" />
+                            )}
+                            
+                            <div className="flex items-start gap-3">
+                              {/* Icon */}
+                              <div className="flex-shrink-0 mt-0.5">
+                                {getNotificationIcon(notif.type)}
+                              </div>
+                              
+                              {/* Content */}
+                              <div className="flex-1 min-w-0">
+                                {notif.link ? (
+                                  <Link 
+                                    href={notif.link} 
+                                    className="block group-hover:bg-gray-100 rounded-lg p-2 -m-2 transition-colors duration-200"
+                                    onClick={() => setNotifOpen(false)}
+                                  >
+                                    <p className="text-sm font-medium text-gray-900 leading-relaxed">
+                                      {notif.message}
+                                    </p>
+                                    {notif.linkLabel && (
+                                      <div className="flex items-center gap-1 mt-1">
+                                        <span className="text-xs text-blue-600 font-medium">
+                                          {notif.linkLabel}
+                                        </span>
+                                        <svg className="h-3 w-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                      </div>
+                                    )}
+                                  </Link>
+                                ) : (
+                                  <p className="text-sm font-medium text-gray-900 leading-relaxed">
+                                    {notif.message}
+                                  </p>
+                                )}
+                                
+                                {/* Timestamp */}
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {notif.createdAt instanceof Date
+                                    ? notif.createdAt.toLocaleString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                        hour12: true
+                                      })
+                                    : ''}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="border-t border-gray-100 bg-gray-50 px-4 py-2">
+                      <button
+                        className="w-full rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        onClick={() => setNotifOpen(false)}
+                      >
+                        Close
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -526,7 +621,7 @@ export default function Header() {
         </div>
         {/* Hamburger for mobile (right aligned) */}
         <button
-          className={`ml-2 flex items-center justify-center rounded-full p-2 transition-all hover:bg-white/20 lg:hidden ${isMenuOpen ? 'scale-110 rotate-90 duration-300' : 'duration-300'}`}
+          className={`ml-auto flex items-center justify-center rounded-full p-2 transition-all hover:bg-white/20 lg:hidden ${isMenuOpen ? 'scale-110 rotate-90 duration-300' : 'duration-300'}`}
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           aria-label="Open menu"
         >
@@ -561,6 +656,140 @@ export default function Header() {
                 )}
               </Link>
             ))}
+          </div>
+        </div>
+      )}
+      {/* Mobile Menu Drawer */}
+      {isMenuOpen && (
+        <div className="fixed inset-0 z-50 flex lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/40"
+            onClick={() => setIsMenuOpen(false)}
+          />
+          {/* Drawer */}
+          <div
+            ref={mobileMenuRef}
+            className="relative ml-auto flex h-full min-h-screen w-4/5 max-w-xs flex-col bg-black shadow-2xl p-6 animate-slide-in-right"
+          >
+            <button
+              className="self-end mb-6 rounded-full p-2 hover:bg-gray-800"
+              onClick={() => setIsMenuOpen(false)}
+              aria-label="Close menu"
+            >
+              <XMarkIcon className="h-8 w-8 text-white" />
+            </button>
+            <nav className="flex flex-col gap-3 mb-6">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`flex items-center gap-3 rounded-lg px-4 py-3 text-lg font-semibold ${
+                    pathname === item.href
+                      ? 'bg-gradient-to-r from-blue-500 to-pink-400 text-white shadow'
+                      : 'text-white hover:bg-gray-800'
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <item.icon className="h-6 w-6 text-white" />
+                  {item.name}
+                </Link>
+              ))}
+            </nav>
+            <div className="border-t border-gray-800 my-4" />
+            {/* User Actions */}
+            <div className="flex flex-col gap-3">
+              {/* Notifications */}
+              <Link
+                href="/account/notifications"
+                className="flex items-center gap-2 rounded-lg px-4 py-3 text-base font-medium text-white hover:bg-gray-800 relative"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <BellIcon className="h-6 w-6 text-white" />
+                Notifications
+                {unreadCount > 0 && (
+                  <span className="absolute top-2 right-4 inline-flex items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs leading-none font-bold text-white">
+                    {unreadCount}
+                  </span>
+                )}
+              </Link>
+              {/* Cart */}
+              <Link
+                href="/cart"
+                className="flex items-center gap-2 rounded-lg px-4 py-3 text-base font-medium text-white hover:bg-gray-800 relative"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <ShoppingCartIcon className="h-6 w-6 text-white" />
+                Cart
+                {cartItems.length > 0 && (
+                  <span className="absolute top-2 right-4 rounded-full bg-gradient-to-r from-pink-400 to-blue-400 px-2 py-0.5 text-xs font-bold text-white">
+                    {cartItems.length}
+                  </span>
+                )}
+              </Link>
+              {/* Orders */}
+              {mounted && user && userRole === 'customer' && (
+                <Link
+                  href="/account/orders"
+                  className="flex items-center gap-2 rounded-lg px-4 py-3 text-base font-medium text-white hover:bg-gray-800"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
+                  </svg>
+                  Orders
+                </Link>
+              )}
+              {/* Support Tickets */}
+              {mounted && user && userRole === 'customer' && (
+                <Link
+                  href="/account/support"
+                  className="flex items-center gap-2 rounded-lg px-4 py-3 text-base font-medium text-white hover:bg-gray-800"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-1.414 1.414A9 9 0 105.636 18.364l1.414-1.414" />
+                  </svg>
+                  Support Tickets
+                </Link>
+              )}
+              {/* Account */}
+              {mounted && user && (
+                <Link
+                  href="/account"
+                  className="flex items-center gap-2 rounded-lg px-4 py-3 text-base font-medium text-white hover:bg-gray-800"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {user?.photoURL ? (
+                    <img
+                      src={user.photoURL}
+                      alt="avatar"
+                      className="h-7 w-7 rounded-full border-2 border-blue-400 shadow"
+                    />
+                  ) : (
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-blue-500 to-pink-400 text-base font-bold text-white shadow">
+                      {getInitials(user.displayName || user.email)}
+                    </span>
+                  )}
+                  Account
+                </Link>
+              )}
+              {/* Log out */}
+              {mounted && user && (
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center gap-2 rounded-lg px-4 py-3 text-base font-medium text-red-400 hover:bg-gray-800"
+                >
+                  <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 012 2v1" />
+                  </svg>
+                  Log out
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

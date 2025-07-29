@@ -76,6 +76,12 @@ service cloud.firestore {
       );
       allow create: if isAuthenticated(); // DEBUG: allow any authenticated user to create orders
       allow update: if isAuthenticated() && (
+        (
+          isOwner(resource.data.userId) &&
+          // Only allow changing status to 'cancelled' and updating updatedAt
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(['status', 'updatedAt']) &&
+          request.resource.data.status == 'cancelled'
+        ) ||
         isVendorOwner(resource.data.vendorId) || 
         isAdmin() || 
         isAdminManager()

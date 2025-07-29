@@ -7,6 +7,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { User, Address, Vendor } from '@/types';
 import { useRouter } from 'next/navigation';
 import { UserCircleIcon, MapPinIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/solid';
+import { validateAddress } from '@/lib/validation';
 
 const AccountEditPage = () => {
   const { user, refreshUserData, loading: authLoading } = useAuth();
@@ -194,25 +195,9 @@ const AccountEditPage = () => {
       hasError = true;
     }
     addresses.forEach((address, idx) => {
-      errors[idx] = {};
-      if (!address.street.trim()) {
-        errors[idx].street = 'Street is required';
-        hasError = true;
-      }
-      if (!address.city.trim()) {
-        errors[idx].city = 'City is required';
-        hasError = true;
-      }
-      if (!address.state.trim()) {
-        errors[idx].state = 'State is required';
-        hasError = true;
-      }
-      if (!address.country.trim()) {
-        errors[idx].country = 'Country is required';
-        hasError = true;
-      }
-      if (!/^[0-9]{5}$/.test(address.zipCode)) {
-        errors[idx].zipCode = 'Zip Code must be exactly 5 digits';
+      const addrErrors = validateAddress(address);
+      errors[idx] = addrErrors;
+      if (Object.keys(addrErrors).length > 0) {
         hasError = true;
       }
     });
@@ -238,10 +223,10 @@ const AccountEditPage = () => {
       const userDocRef = doc(db, 'users', user.uid);
       // Log the current Firestore user document for debugging
       const userDocSnap = await getDoc(userDocRef);
-      console.log('Current Firestore user document:', userDocSnap.data());
+      // console.log('Current Firestore user document:', userDocSnap.data());
       // Log the update payload for debugging
       const updateData = getUpdateData();
-      console.log('Firestore update payload:', updateData);
+      // console.log('Firestore update payload:', updateData);
       await updateDoc(userDocRef, updateData);
       await refreshUserData();
       setSuccess('Profile updated successfully!');

@@ -23,6 +23,7 @@ import {
   calculateServiceFee,
   DELIVERY_FEE,
 } from '@/lib/fees';
+import { validateAddress } from '@/lib/validation';
 
 declare global {
   interface Window {
@@ -149,25 +150,17 @@ export default function CheckoutPage() {
     });
   };
 
-  const validateAddress = (address: Address) => {
-    const errors = { street: '', city: '', state: '', zipCode: '', country: '' };
-    if (!address.street || address.street.trim() === '')
-      errors.street = 'Street address is required.';
-    if (!address.city || address.city.trim() === '') errors.city = 'City is required.';
-    if (!address.state || address.state.trim() === '') errors.state = 'State is required.';
-    if (!address.zipCode || address.zipCode.trim() === '') {
-      errors.zipCode = 'Zip code is required.';
-    } else if (!/^[0-9]{3,}$/.test(address.zipCode.trim())) {
-      errors.zipCode = 'Zip code must be numeric.';
-    }
-    if (!address.country || address.country.trim() === '') errors.country = 'Country is required.';
-    return errors;
-  };
-
   const handleSaveAddress = async () => {
-    const errors = validateAddress(shippingAddress);
-    setAddressErrors(errors);
-    const hasErrors = Object.values(errors).some(Boolean);
+    const rawErrors = validateAddress(shippingAddress);
+    const addressErrors = {
+      street: rawErrors.street || '',
+      city: rawErrors.city || '',
+      state: rawErrors.state || '',
+      zipCode: rawErrors.zipCode || '',
+      country: rawErrors.country || '',
+    };
+    setAddressErrors(addressErrors);
+    const hasErrors = Object.values(addressErrors).some(Boolean);
     if (hasErrors) return;
     if (!user) return;
     try {
@@ -230,17 +223,17 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = async () => {
     if (!user) {
-      console.log('User not logged in, redirecting to login.');
+      // console.log('User not logged in, redirecting to login.');
       toast.error('Please log in to place an order.');
       router.push('/login');
       return;
     }
     // Debug: Log user info before placing order
-    console.log('Placing order as user:', user);
-    console.log('User UID:', user.uid);
-    console.log('User role:', user.role);
+    // console.log('Placing order as user:', user);
+    // console.log('User UID:', user.uid);
+    // console.log('User role:', user.role);
     if (!shippingAddress.street || !shippingAddress.city || !shippingAddress.zipCode) {
-      console.log('Incomplete shipping address.');
+      // console.log('Incomplete shipping address.');
       toast.error('Please provide a complete shipping address.');
       setIsEditingAddress(true);
       return;
@@ -250,7 +243,7 @@ export default function CheckoutPage() {
       return;
     }
     if (cartItems.length === 0) {
-      console.log('Cart is empty.');
+      // console.log('Cart is empty.');
       toast.error('Your cart is empty. Add items to proceed.');
       return;
     }
@@ -291,7 +284,7 @@ export default function CheckoutPage() {
 
           // Generate persistent order number
           let orderNumber = '';
-          console.log('About to run Firestore transaction for order number for vendor:', vendorId);
+          // console.log('About to run Firestore transaction for order number for vendor:', vendorId);
           await runTransaction(db, async (transaction) => {
             const metaRef = doc(db, 'orderMeta', 'numbering');
             const metaSnap = await transaction.get(metaRef);
@@ -303,10 +296,10 @@ export default function CheckoutPage() {
             orderNumber = `ORD-2024-${String(newNumber).padStart(4, '0')}`;
             transaction.set(metaRef, { lastNumber: newNumber }, { merge: true });
           });
-          console.log(
-            'Successfully ran Firestore transaction for order number. Got orderNumber:',
-            orderNumber
-          );
+          // console.log(
+          //   'Successfully ran Firestore transaction for order number. Got orderNumber:',
+          //   orderNumber
+          // );
           orderNumbers.push(orderNumber);
 
           const newOrderRef = doc(ordersCollectionRef);
@@ -331,33 +324,33 @@ export default function CheckoutPage() {
             orderNumber, // Store persistent order number
           };
           // Debug: Log before setting order
-          console.log(
-            'Attempting to create order for vendor:',
-            vendorId,
-            'OrderRef:',
-            newOrderRef.path,
-            'Order:',
-            newOrder
-          );
+          // console.log(
+          //   'Attempting to create order for vendor:',
+          //   vendorId,
+          //   'OrderRef:',
+          //   newOrderRef.path,
+          //   'Order:',
+          //   newOrder
+          // );
           batch.set(newOrderRef, newOrder);
           // Debug: Log after setting order
-          console.log('Order set in batch for vendor:', vendorId);
+          // console.log('Order set in batch for vendor:', vendorId);
 
           // Decrement product stock
           for (const item of vendorItems) {
             const productRef = doc(db, 'products', item.id);
             // Debug: Log before updating product stock
-            console.log(
-              'Attempting to update product stock:',
-              productRef.path,
-              'Old stock:',
-              item.stock,
-              'Quantity:',
-              item.quantity
-            );
+            // console.log(
+            //   'Attempting to update product stock:',
+            //   productRef.path,
+            //   'Old stock:',
+            //   item.stock,
+            //   'Quantity:',
+            //   item.quantity
+            // );
             batch.update(productRef, { stock: item.stock - item.quantity });
             // Debug: Log after updating product stock
-            console.log('Product stock update set in batch for:', productRef.path);
+            // console.log('Product stock update set in batch for:', productRef.path);
           }
           // Add notification for this order
           try {
@@ -369,23 +362,23 @@ export default function CheckoutPage() {
               read: false,
               data: { orderNumber },
               link: `/account/orders/${newOrderRef.id}`,
-              linkLabel: 'View Order',
+              linkLabel: orderNumber,
             });
           } catch (notifErr) {
-            console.error('Failed to create notification:', notifErr);
+            // console.error('Failed to create notification:', notifErr);
           }
         }
 
         // Debug: Log before committing batch
-        console.log('Committing Firestore batch for order placement...');
+        // console.log('Committing Firestore batch for order placement...');
         await batch.commit();
         // Debug: Log after committing batch
-        console.log('Batch committed successfully. Clearing cart...');
+        // console.log('Batch committed successfully. Clearing cart...');
         // Debug: Log before clearing cart
-        console.log('Clearing cart for user UID:', user.uid);
+        // console.log('Clearing cart for user UID:', user.uid);
         clearCartContext();
         // Debug: Log after clearing cart
-        console.log('Cart cleared for user UID:', user.uid);
+        // console.log('Cart cleared for user UID:', user.uid);
         toast.success('Order(s) placed successfully (Cash on Delivery)!');
         router.push('/order-confirmation');
       } else if (selectedPaymentMethod === 'razorpay') {
@@ -528,7 +521,7 @@ export default function CheckoutPage() {
         rzp.open();
       }
     } catch (error) {
-      console.error('Error placing order:', error);
+      // console.error('Error placing order:', error);
       toast.error('Failed to place order. Please try again.');
     }
   };

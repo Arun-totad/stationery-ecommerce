@@ -184,7 +184,7 @@ export default function OrderDetailPage() {
           read: false,
           data: { orderId, newStatus },
           link: `/account/orders/${orderId}`,
-          linkLabel: 'View Order',
+          linkLabel: order.orderNumber || orderId,
         });
       } catch (notifErr) {
         console.error('Failed to create status update notification:', notifErr);

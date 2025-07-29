@@ -46,11 +46,11 @@ export default function ProductDetailPage() {
           const fetchedProduct = { id: productSnap.id, ...productSnap.data() } as Product;
           setProduct(fetchedProduct);
 
-          console.log('Product ID:', productId);
-          console.log('Current Cart Items:', cartItems);
+          // console.log('Product ID:', productId);
+          // console.log('Current Cart Items:', cartItems);
 
           const existingCartItem = cartItems.find((item) => item.id === productId);
-          console.log('Existing Cart Item for this product:', existingCartItem);
+          // console.log('Existing Cart Item for this product:', existingCartItem);
 
           if (existingCartItem) {
             setQuantity(existingCartItem.quantity);

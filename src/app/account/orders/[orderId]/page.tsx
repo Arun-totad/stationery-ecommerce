@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Order } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import type { Vendor } from '@/types';
 import { DELIVERY_FEE, FREE_SHIPPING_THRESHOLD } from '@/lib/fees';
+import ConfirmModal from '@/components/ConfirmModal';
+import { toast } from 'react-hot-toast';
 
 function formatDateDDMMYYYY(date: Date | string | number | undefined | null): string {
   if (!date) return '';
@@ -30,6 +32,8 @@ export default function UserOrderDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [vendorName, setVendorName] = useState<string | null>(null);
   const [supportTickets, setSupportTickets] = useState<any[]>([]);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -87,6 +91,60 @@ export default function UserOrderDetailPage() {
     };
     if (orderId && user && !authLoading) fetchOrder();
   }, [orderId, user, authLoading]);
+
+  const handleCancelOrder = async () => {
+    if (!order || !user) return;
+    
+    setCancelling(true);
+    try {
+      const orderRef = doc(db, 'orders', order.id);
+      await updateDoc(orderRef, {
+        status: 'cancelled',
+        updatedAt: new Date(),
+      });
+      
+      // Update local state
+      setOrder({
+        ...order,
+        status: 'cancelled',
+        updatedAt: new Date(),
+      });
+      
+      // Add notification for order cancellation
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          userId: user.uid,
+          type: 'order_status_update',
+          message: `Your order ${order.orderNumber || order.id} has been cancelled successfully.`,
+          createdAt: new Date(),
+          read: false,
+          data: { orderId: order.id, newStatus: 'cancelled' },
+          link: `/account/orders/${order.id}`,
+          linkLabel: order.orderNumber || order.id,
+        });
+      } catch (notifErr) {
+        console.error('Failed to create cancellation notification:', notifErr);
+      }
+      
+      toast.success('Order cancelled successfully!');
+      setShowCancelModal(false);
+    } catch (err) {
+      console.error('Failed to cancel order:', err);
+      const errorAny = err as any;
+      if (errorAny && typeof errorAny === 'object') {
+        // Firestore errors have a 'code' and 'message' property
+        // eslint-disable-next-line no-console
+        // console.log('Firestore error code:', errorAny.code);
+        // console.log('Firestore error message:', errorAny.message);
+      }
+      setError('Failed to cancel order. Please try again.');
+      toast.error('Failed to cancel order. Please try again.');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const canCancelOrder = order && (order.status === 'pending' || order.status === 'processing');
 
   if (loading || authLoading) {
     return (
@@ -209,9 +267,9 @@ export default function UserOrderDetailPage() {
   return (
     <div className="mx-auto mt-8 max-w-2xl px-2 sm:px-0">
       <Link href="/account/orders" className="mb-6 inline-block">
-        <button className="flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-2 text-base font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50">
+        <button className="group flex items-center gap-3 rounded-xl border border-blue-200 bg-white px-6 py-3 text-base font-semibold text-blue-700 shadow-lg transition-all duration-200 hover:bg-blue-50 hover:shadow-xl active:scale-95">
           <svg
-            className="h-4 w-4"
+            className="h-4 w-4 transition-transform group-hover:-translate-x-1"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
@@ -223,7 +281,7 @@ export default function UserOrderDetailPage() {
         </button>
       </Link>
       <div
-        className="relative mb-10 rounded-3xl border-2 border-transparent bg-white bg-clip-padding p-6 shadow-2xl sm:p-10"
+        className="relative mb-10 rounded-3xl border-2 border-transparent bg-gradient-to-br from-white via-blue-50/30 to-pink-50/30 bg-clip-padding p-6 shadow-2xl sm:p-10"
         style={{ borderImage: 'linear-gradient(90deg, #3B82F6 0%, #F472B6 100%) 1' }}
       >
         {/* Support Ticket Links */}
@@ -260,15 +318,46 @@ export default function UserOrderDetailPage() {
             {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
           </span>
         </div>
+        
+        {/* Cancelled order message */}
+        {order.status === 'cancelled' && (
+          <div className="mb-6 rounded-xl border border-red-200 bg-gradient-to-r from-red-50 to-pink-50 p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                  <svg
+                    className="h-5 w-5 text-red-600"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 9v2m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="flex-1">
+                <h4 className="text-base font-semibold text-red-800">
+                  Order Cancelled
+                </h4>
+                <p className="mt-2 text-sm leading-relaxed text-red-700">
+                  This order has been cancelled. If you have any questions or need assistance, 
+                  please create a support ticket.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <h1 className="mb-8 bg-gradient-to-r from-blue-500 to-pink-400 bg-clip-text text-3xl font-extrabold tracking-tight text-gray-900 text-transparent">
           Order Details
         </h1>
         {/* Order Info Grid */}
-        <div className="mb-8 grid grid-cols-1 gap-x-10 gap-y-6 sm:grid-cols-2">
-          <div className="flex items-center gap-3">
-            <span className="text-blue-500">
+        <div className="mb-8 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
+          <div className="flex items-center gap-4 rounded-xl bg-white/50 p-4 shadow-sm">
+            <span className="flex-shrink-0 text-blue-500">
               <svg
-                className="h-5 w-5"
+                className="h-6 w-6"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
@@ -285,10 +374,10 @@ export default function UserOrderDetailPage() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-blue-500">
+          <div className="flex items-center gap-4 rounded-xl bg-white/50 p-4 shadow-sm">
+            <span className="flex-shrink-0 text-blue-500">
               <svg
-                className="h-5 w-5"
+                className="h-6 w-6"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
@@ -309,88 +398,30 @@ export default function UserOrderDetailPage() {
               )}
             </div>
           </div>
-          <div className="mt-2 mb-2 flex flex-col gap-1 rounded-xl border border-blue-100 bg-blue-50 p-4 sm:col-span-2">
+          <div className="mt-2 mb-2 flex flex-col gap-1 rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-6 shadow-sm sm:col-span-2">
             <div className="mb-4 flex items-center justify-between text-sm text-gray-700">
               <span>Subtotal</span>
-              <span>${subtotal.toFixed(2)}</span>
+              <span className="font-semibold">${subtotal.toFixed(2)}</span>
             </div>
             <div className="mb-4 flex items-center justify-between text-sm text-gray-700">
-              <span className="flex flex-col gap-2 md:flex-row md:items-center">
-                Delivery Fee
-                {subtotal < FREE_SHIPPING_THRESHOLD && (
-                  <span className="animate-fade-in ml-2 hidden items-center overflow-hidden rounded-full border border-blue-100 bg-gradient-to-r from-blue-50 via-green-50 to-pink-50 px-3 py-1 whitespace-nowrap shadow md:flex">
-                    <span className="mr-1 animate-bounce text-base leading-tight font-extrabold text-green-600">
-                      ${(FREE_SHIPPING_THRESHOLD - subtotal).toFixed(0)}
-                    </span>
-                    <span
-                      className="ml-1 align-middle text-sm font-medium text-gray-500"
-                      style={{ fontWeight: 500 }}
-                    >
-                      away from <span className="font-bold text-green-600">FREE delivery!</span>
-                    </span>
-                  </span>
-                )}
-              </span>
-              <span
-                className={
-                  subtotal >= FREE_SHIPPING_THRESHOLD
-                    ? 'flex flex-col items-end'
-                    : 'text-base font-bold text-blue-600'
-                }
-              >
-                {subtotal >= FREE_SHIPPING_THRESHOLD ? (
-                  <>
-                    <span className="text-base font-extrabold text-green-600">$0.00</span>
-                    <span className="mt-1 flex items-center justify-center">
-                      <span className="flex flex-row items-center gap-1 rounded-full border border-green-200 bg-gradient-to-r from-green-100 via-blue-50 to-pink-50 px-2 py-0.5 whitespace-nowrap shadow-sm">
-                        <span
-                          className="rounded-full border border-green-300 bg-gradient-to-r from-green-400 to-blue-400 px-2 py-0.5 text-xs font-bold text-white shadow select-none"
-                          style={{ letterSpacing: '2px' }}
-                        >
-                          FREE
-                        </span>
-                        <span className="text-xs font-bold text-red-600">
-                          -${DELIVERY_FEE.toFixed(2)}
-                        </span>
-                        <span className="text-xs font-bold text-red-600">
-                          ${DELIVERY_FEE.toFixed(2)}
-                        </span>
-                      </span>
-                    </span>
-                  </>
-                ) : (
-                  <>${deliveryFee.toFixed(2)}</>
-                )}
-              </span>
+              <span>Delivery Fee</span>
+              <span className="font-semibold">${deliveryFee.toFixed(2)}</span>
             </div>
-            {subtotal < FREE_SHIPPING_THRESHOLD && (
-              <span className="animate-fade-in mt-2 mb-2 flex w-full items-center overflow-hidden rounded-full border border-blue-100 bg-gradient-to-r from-blue-50 via-green-50 to-pink-50 px-3 py-1 whitespace-nowrap shadow md:hidden">
-                <span className="mr-1 animate-bounce text-base leading-tight font-extrabold text-green-600">
-                  ${(FREE_SHIPPING_THRESHOLD - subtotal).toFixed(0)}
-                </span>
-                <span
-                  className="ml-1 align-middle text-sm font-medium text-gray-500"
-                  style={{ fontWeight: 500 }}
-                >
-                  away from <span className="font-bold text-green-600">FREE delivery!</span>
-                </span>
-              </span>
-            )}
             <div className="mb-4 flex items-center justify-between text-sm text-gray-700">
               <span>
                 Service Fee <span className="ml-2 text-xs text-gray-500">(2% of subtotal)</span>
               </span>
-              <span>${serviceFee.toFixed(2)}</span>
+              <span className="font-semibold">${serviceFee.toFixed(2)}</span>
             </div>
-            <div className="mt-2 flex items-center justify-between border-t pt-2 text-lg font-bold">
+            <div className="mt-4 flex items-center justify-between border-t border-blue-200 pt-4 text-lg font-bold">
               <span className="text-gray-900">Total</span>
               <span className="text-blue-600">${total.toFixed(2)}</span>
             </div>
           </div>
-          <div className="mt-2 flex items-center gap-3">
-            <span className="text-blue-500">
+          <div className="mt-2 flex items-center gap-4 rounded-xl bg-white/50 p-4 shadow-sm">
+            <span className="flex-shrink-0 text-blue-500">
               <svg
-                className="h-5 w-5"
+                className="h-6 w-6"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
@@ -407,10 +438,10 @@ export default function UserOrderDetailPage() {
               </div>
             </div>
           </div>
-          <div className="mt-2 flex items-center gap-3">
-            <span className="text-blue-500">
+          <div className="mt-2 flex items-center gap-4 rounded-xl bg-white/50 p-4 shadow-sm">
+            <span className="flex-shrink-0 text-blue-500">
               <svg
-                className="h-5 w-5"
+                className="h-6 w-6"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
@@ -428,20 +459,84 @@ export default function UserOrderDetailPage() {
           </div>
         </div>
         <div className="mb-8">
-          <Link href={`/account/support/new?orderId=${order.id}`}>
-            <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-base font-semibold text-white shadow transition hover:bg-blue-700">
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
+          {canCancelOrder ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <button
+                onClick={() => setShowCancelModal(true)}
+                className="group flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:from-red-600 hover:to-red-700 hover:shadow-xl active:scale-95"
               >
-                <path d="M12 4v16m8-8H4" />
-              </svg>
-              Create Support Ticket
-            </button>
-          </Link>
+                <svg
+                  className="h-5 w-5 transition-transform group-hover:scale-110"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Cancel Order
+              </button>
+              <Link href={`/account/support/new?orderId=${order.id}`}>
+                <button className="group flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:from-blue-600 hover:to-blue-700 hover:shadow-xl active:scale-95">
+                  <svg
+                    className="h-5 w-5 transition-transform group-hover:scale-110"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create Support Ticket
+                </button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Link href={`/account/support/new?orderId=${order.id}`}>
+                <button className="group flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:from-blue-600 hover:to-blue-700 hover:shadow-xl active:scale-95">
+                  <svg
+                    className="h-5 w-5 transition-transform group-hover:scale-110"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create Support Ticket
+                </button>
+              </Link>
+              {order.status !== 'cancelled' && (
+                <div className="rounded-xl border border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50 p-6 shadow-sm">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100">
+                        <svg
+                          className="h-5 w-5 text-yellow-600"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M12 9v2m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-base font-semibold text-yellow-800">
+                        Order Cannot Be Cancelled
+                      </h4>
+                      <p className="mt-2 text-sm leading-relaxed text-yellow-700">
+                        This order cannot be cancelled as it has progressed beyond the processing stage. 
+                        If you need assistance, please create a support ticket and our team will help you.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <hr className="animate-fade-in-up my-8 h-1 rounded-full border-0 bg-gradient-to-r from-blue-400 via-pink-300 to-blue-400" />
         <h2 className="animate-fade-in-up mb-4 text-xl font-bold text-gray-900">Items</h2>
@@ -549,6 +644,18 @@ export default function UserOrderDetailPage() {
             </div>
           </div>
         </div>
+        {/* Cancel Order Modal */}
+        <ConfirmModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          onConfirm={handleCancelOrder}
+          title="Cancel Order"
+          message="Are you sure you want to cancel this order? This action cannot be undone and may affect your account."
+          confirmText="Cancel Order"
+          cancelText="Keep Order"
+          confirmButtonColor="bg-red-600 hover:bg-red-700"
+          isLoading={cancelling}
+        />
       </div>
     </div>
   );
