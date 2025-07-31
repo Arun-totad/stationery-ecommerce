@@ -92,8 +92,7 @@ export default function SignUpPage() {
         const user = JSON.parse(JSON.stringify(window.localStorage.getItem('firebase:authUser'))) || null;
         const userId = user?.uid || null;
         if (userId) {
-          await addDoc(collection(db, 'notifications'), {
-            userId,
+          const notificationData = {
             type: 'account_created',
             message: userType === 'vendor' 
               ? 'Welcome! Please complete your shop profile to start selling.'
@@ -102,7 +101,11 @@ export default function SignUpPage() {
             read: false,
             link: userType === 'vendor' ? '/vendor' : '/account/edit',
             linkLabel: userType === 'vendor' ? 'Complete Profile' : 'Update Address',
-          });
+          };
+          
+          // Create notification in user's subcollection
+          const userNotificationsRef = collection(db, 'users', userId, 'notifications');
+          await addDoc(userNotificationsRef, notificationData);
         }
       } catch (notifErr) {
         console.error('Failed to create welcome notification:', notifErr);

@@ -45,11 +45,41 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      allow read: if resource.data.role == 'vendor' || isOwner(userId) || isAdmin() || isAdminManager();
+      allow read: if resource.data.role == 'vendor' || isOwner(userId) || isAdmin() || isAdminManager() || 
+        // Allow vendors to read customer user documents (for order management)
+        (isVendor() && resource.data.role == 'customer');
       allow list: if true; // Allow anyone to list users (but only vendor docs will be readable)
       allow update: if isOwner(userId) || isAdmin() || isAdminManager();
       allow create: if isAuthenticated();
       allow delete: if isAdmin() || isAdminManager();
+      
+      // Notifications subcollection
+      match /notifications/{notificationId} {
+        // Allow users to read their own notifications
+        allow read: if isAuthenticated() && request.auth.uid == userId;
+        // Allow users to update (e.g., mark as read) their own notifications
+        allow update: if isAuthenticated() && request.auth.uid == userId;
+        // Allow users to create notifications for themselves, or vendors/admins to create for customers
+        allow create: if isAuthenticated() && (
+          request.auth.uid == userId ||
+          isAdmin() ||
+          isAdminManager() ||
+          (
+            isVendor() &&
+            // Allow vendors to create notifications for customers (order status updates)
+            request.resource.data.type == 'order_status_update' &&
+            request.resource.data.data.orderId is string
+          )
+        );
+        // Only admins can delete notifications
+        allow delete: if isAdmin() || isAdminManager();
+      }
+      
+      // Cart subcollection
+      match /cart/{cartId} {
+        // Allow users to read, create, update, and delete their own cart
+        allow read, create, update, delete: if isAuthenticated() && request.auth.uid == userId;
+      }
     }
 
     // Products collection
@@ -96,10 +126,8 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && (isAdmin() || isAdminManager());
     }
 
-    // Carts collection
-    match /carts/{cartId} {
-      allow read, create, update, delete: if isAuthenticated() && isOwner(cartId);
-    }
+    // Carts are now stored as subcollections under users
+    // This rule is no longer needed since carts are accessed via user subcollections
 
     // Support tickets collection
     match /supportTickets/{ticketId} {
@@ -215,15 +243,7 @@ service cloud.firestore {
     }
     
     // Notifications collection
-    match /notifications/{notificationId} {
-      // Allow users to read their own notifications
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      // Allow users to create notifications for themselves
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      // Allow users to update (e.g., mark as read) their own notifications
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      // Only admins can delete notifications
-      allow delete: if isAdmin() || isAdminManager();
-    }
+    // Notifications are now stored as subcollections under users
+// This rule is no longer needed since notifications are accessed via user subcollections
   }
 } 

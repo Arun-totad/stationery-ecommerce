@@ -16,10 +16,13 @@ import {
   addDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Order, User, Product, UserRole, Address } from '@/types';
+import { Order, User, Product, UserRole, Address, OrderActivity } from '@/types';
 import { toast } from 'react-hot-toast';
 import { Timestamp } from 'firebase/firestore';
 import Link from 'next/link';
+import OrderActivityLog from '@/components/OrderActivityLog';
+import PaymentBreakdownDisplay from '@/components/PaymentBreakdownDisplay';
+import { addOrderActivity } from '@/lib/orderActivity';
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -31,7 +34,9 @@ export default function OrderDetailPage() {
   const [vendor, setVendor] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isUpdatingPaymentStatus, setIsUpdatingPaymentStatus] = useState(false);
   const [newStatus, setNewStatus] = useState<Order['status']>(order?.status || 'pending');
+  const [newPaymentStatus, setNewPaymentStatus] = useState<Order['paymentStatus']>(order?.paymentStatus || 'pending');
   const [newEstimatedDeliveryDate, setNewEstimatedDeliveryDate] = useState<string>('');
   const [supportTickets, setSupportTickets] = useState<
     { id: string; ticketNumber?: string; subject?: string }[]
@@ -46,6 +51,8 @@ export default function OrderDetailPage() {
     }
     return value; // Return original if not 10 digits
   };
+
+  
 
   useEffect(() => {
     if (!orderId) {
@@ -93,6 +100,18 @@ export default function OrderDetailPage() {
               : new Date(item.updatedAt),
         }));
 
+        // Convert activity log timestamps
+        if (orderData.activityLog) {
+          orderData.activityLog = orderData.activityLog.map((activity: OrderActivity) => ({
+            ...activity,
+            timestamp: activity.timestamp instanceof Timestamp
+              ? activity.timestamp.toDate()
+              : new Date(activity.timestamp),
+          }));
+        } else {
+          orderData.activityLog = [];
+        }
+
         // Parse shipping address string back to object if it's a string
         if (typeof orderData.shippingAddress === 'string') {
           try {
@@ -112,11 +131,96 @@ export default function OrderDetailPage() {
 
         setOrder(orderData);
         setNewStatus(orderData.status);
+        setNewPaymentStatus(orderData.paymentStatus);
 
         // Initialize newEstimatedDeliveryDate
         if (orderData.estimatedDeliveryDate) {
           const date = orderData.estimatedDeliveryDate;
           setNewEstimatedDeliveryDate(date.toISOString().split('T')[0]); // Format to YYYY-MM-DD
+        }
+
+        // Add initial order creation activity if no activity log exists
+        if (!orderData.activityLog || orderData.activityLog.length === 0) {
+          try {
+            await addOrderActivity(
+              orderId,
+              'order_created',
+              'Order was created',
+              orderData.userId,
+              'customer',
+              null,
+              orderData.status
+            );
+
+            // Add coupon application activity if coupon was used
+            if (orderData.couponCode && orderData.discountAmount && orderData.discountAmount > 0) {
+              await addOrderActivity(
+                orderId,
+                'coupon_applied',
+                `Coupon ${orderData.couponCode} applied`,
+                orderData.userId,
+                'customer',
+                null,
+                `Discount: $${orderData.discountAmount.toFixed(2)}`
+              );
+            }
+
+            // Add payment status activity
+            if (orderData.paymentStatus === 'completed') {
+              await addOrderActivity(
+                orderId,
+                'payment_completed',
+                'Payment completed',
+                orderData.userId,
+                'customer',
+                null,
+                orderData.paymentMethod
+              );
+            } else if (orderData.paymentStatus === 'failed') {
+              await addOrderActivity(
+                orderId,
+                'payment_failed',
+                'Payment failed',
+                orderData.userId,
+                'customer',
+                null,
+                orderData.paymentMethod
+              );
+            }
+
+            // Refresh order data to include the newly added activities
+            const refreshedOrderSnap = await getDoc(orderRef);
+            if (refreshedOrderSnap.exists()) {
+              const refreshedOrderData = refreshedOrderSnap.data() as Order;
+              // Convert timestamps
+              refreshedOrderData.createdAt = refreshedOrderData.createdAt instanceof Timestamp
+                ? refreshedOrderData.createdAt.toDate()
+                : new Date(refreshedOrderData.createdAt);
+              refreshedOrderData.updatedAt = refreshedOrderData.updatedAt instanceof Timestamp
+                ? refreshedOrderData.updatedAt.toDate()
+                : new Date(refreshedOrderData.updatedAt);
+              refreshedOrderData.estimatedDeliveryDate = refreshedOrderData.estimatedDeliveryDate instanceof Timestamp
+                ? refreshedOrderData.estimatedDeliveryDate.toDate()
+                : refreshedOrderData.estimatedDeliveryDate
+                  ? new Date(refreshedOrderData.estimatedDeliveryDate)
+                  : undefined;
+              
+              // Convert activity log timestamps
+              if (refreshedOrderData.activityLog) {
+                refreshedOrderData.activityLog = refreshedOrderData.activityLog.map((activity: OrderActivity) => ({
+                  ...activity,
+                  timestamp: activity.timestamp instanceof Timestamp
+                    ? activity.timestamp.toDate()
+                    : new Date(activity.timestamp),
+                }));
+              }
+              
+              // Update the order state with refreshed data
+              setOrder(refreshedOrderData);
+            }
+          } catch (error) {
+            console.error('Failed to add initial order activities:', error);
+          }
         }
 
         // Fetch customer details
@@ -145,6 +249,58 @@ export default function OrderDetailPage() {
           subject: doc.data().subject,
         }));
         setSupportTickets(tickets);
+
+        // Add support ticket creation activities if tickets exist and no activity log
+        if (tickets.length > 0 && (!orderData.activityLog || orderData.activityLog.length === 0)) {
+          try {
+            for (const ticket of tickets) {
+              await addOrderActivity(
+                orderId,
+                'support_ticket_created',
+                `Support ticket created: ${ticket.subject || ticket.ticketNumber || ticket.id}`,
+                orderData.userId,
+                'customer',
+                null,
+                ticket.ticketNumber || ticket.id
+              );
+            }
+            
+            // Refresh order data to include the newly added support ticket activities
+            const refreshedOrderSnap = await getDoc(orderRef);
+            if (refreshedOrderSnap.exists()) {
+              const refreshedOrderData = refreshedOrderSnap.data() as Order;
+              // Convert timestamps
+              refreshedOrderData.createdAt = refreshedOrderData.createdAt instanceof Timestamp
+                ? refreshedOrderData.createdAt.toDate()
+                : new Date(refreshedOrderData.createdAt);
+              refreshedOrderData.updatedAt = refreshedOrderData.updatedAt instanceof Timestamp
+                ? refreshedOrderData.updatedAt.toDate()
+                : new Date(refreshedOrderData.updatedAt);
+              refreshedOrderData.estimatedDeliveryDate = refreshedOrderData.estimatedDeliveryDate instanceof Timestamp
+                ? refreshedOrderData.estimatedDeliveryDate.toDate()
+                : refreshedOrderData.estimatedDeliveryDate
+                  ? new Date(refreshedOrderData.estimatedDeliveryDate)
+                  : undefined;
+              
+              // Convert activity log timestamps
+              if (refreshedOrderData.activityLog) {
+                refreshedOrderData.activityLog = refreshedOrderData.activityLog.map((activity: OrderActivity) => ({
+                  ...activity,
+                  timestamp: activity.timestamp instanceof Timestamp
+                    ? activity.timestamp.toDate()
+                    : new Date(activity.timestamp),
+                }));
+              }
+              
+              // Update the order state with refreshed data
+              setOrder(refreshedOrderData);
+            }
+          } catch (error) {
+            console.error('Failed to add support ticket activities:', error);
+          }
+        }
+
+
       } catch (error) {
         console.error('Error fetching order details:', error);
         toast.error('Failed to load order details.');
@@ -180,14 +336,51 @@ export default function OrderDetailPage() {
         return;
       }
 
-      await updateDoc(orderRef, { status: newStatus, updatedAt: new Date() });
-      setOrder((prevOrder) =>
-        prevOrder ? { ...prevOrder, status: newStatus, updatedAt: new Date() } : null
+      // Log the status change activity
+      await addOrderActivity(
+        orderId,
+        'status_changed',
+        'Order status updated',
+        currentUser.uid,
+        userRole || 'admin',
+        order.status,
+        newStatus
       );
+
+      await updateDoc(orderRef, { status: newStatus, updatedAt: new Date() });
+      
+      // Refresh order data to include the newly added activity
+      const refreshedOrderSnap = await getDoc(orderRef);
+      if (refreshedOrderSnap.exists()) {
+        const refreshedOrderData = refreshedOrderSnap.data() as Order;
+        // Convert timestamps
+        refreshedOrderData.createdAt = refreshedOrderData.createdAt instanceof Timestamp
+          ? refreshedOrderData.createdAt.toDate()
+          : new Date(refreshedOrderData.createdAt);
+        refreshedOrderData.updatedAt = refreshedOrderData.updatedAt instanceof Timestamp
+          ? refreshedOrderData.updatedAt.toDate()
+          : new Date(refreshedOrderData.updatedAt);
+        refreshedOrderData.estimatedDeliveryDate = refreshedOrderData.estimatedDeliveryDate instanceof Timestamp
+          ? refreshedOrderData.estimatedDeliveryDate.toDate()
+          : refreshedOrderData.estimatedDeliveryDate
+            ? new Date(refreshedOrderData.estimatedDeliveryDate)
+            : undefined;
+        
+        // Convert activity log timestamps
+        if (refreshedOrderData.activityLog) {
+          refreshedOrderData.activityLog = refreshedOrderData.activityLog.map((activity: OrderActivity) => ({
+            ...activity,
+            timestamp: activity.timestamp instanceof Timestamp
+              ? activity.timestamp.toDate()
+              : new Date(activity.timestamp),
+          }));
+        }
+        
+        setOrder(refreshedOrderData);
+      }
       // Notify user about status update
       try {
-        await addDoc(collection(db, 'notifications'), {
-          userId: order.userId,
+        const notificationData = {
           type: 'order_status_update',
           message: `Status of your order ${order.orderNumber || orderId} changed to '${newStatus}'.`,
           createdAt: new Date(),
@@ -195,7 +388,11 @@ export default function OrderDetailPage() {
           data: { orderId, newStatus },
           link: `/account/orders/${orderId}`,
           linkLabel: order.orderNumber || orderId,
-        });
+        };
+        
+        // Create notification in user's subcollection
+        const userNotificationsRef = collection(db, 'users', order.userId, 'notifications');
+        await addDoc(userNotificationsRef, notificationData);
       } catch (notifErr) {
         console.error('Failed to create status update notification:', notifErr);
       }
@@ -205,6 +402,83 @@ export default function OrderDetailPage() {
       toast.error('Failed to update order status.');
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handlePaymentStatusChange = async () => {
+    if (!order || !newPaymentStatus || !currentUser) return;
+
+    setIsUpdatingPaymentStatus(true);
+    try {
+      const orderRef = doc(db, 'orders', orderId);
+
+      // Log the payment status change activity
+      await addOrderActivity(
+        orderId,
+        newPaymentStatus === 'completed' ? 'payment_completed' : newPaymentStatus === 'failed' ? 'payment_failed' : 'payment_status_changed',
+        'Payment status updated',
+        currentUser.uid,
+        userRole || 'admin',
+        order.paymentStatus,
+        newPaymentStatus
+      );
+
+      await updateDoc(orderRef, { paymentStatus: newPaymentStatus, updatedAt: new Date() });
+      
+      // Refresh order data to include the newly added activity
+      const refreshedOrderSnap = await getDoc(orderRef);
+      if (refreshedOrderSnap.exists()) {
+        const refreshedOrderData = refreshedOrderSnap.data() as Order;
+        // Convert timestamps
+        refreshedOrderData.createdAt = refreshedOrderData.createdAt instanceof Timestamp
+          ? refreshedOrderData.createdAt.toDate()
+          : new Date(refreshedOrderData.createdAt);
+        refreshedOrderData.updatedAt = refreshedOrderData.updatedAt instanceof Timestamp
+          ? refreshedOrderData.updatedAt.toDate()
+          : new Date(refreshedOrderData.updatedAt);
+        refreshedOrderData.estimatedDeliveryDate = refreshedOrderData.estimatedDeliveryDate instanceof Timestamp
+          ? refreshedOrderData.estimatedDeliveryDate.toDate()
+          : refreshedOrderData.estimatedDeliveryDate
+            ? new Date(refreshedOrderData.estimatedDeliveryDate)
+            : undefined;
+        
+        // Convert activity log timestamps
+        if (refreshedOrderData.activityLog) {
+          refreshedOrderData.activityLog = refreshedOrderData.activityLog.map((activity: OrderActivity) => ({
+            ...activity,
+            timestamp: activity.timestamp instanceof Timestamp
+              ? activity.timestamp.toDate()
+              : new Date(activity.timestamp),
+          }));
+        }
+        
+        setOrder(refreshedOrderData);
+      }
+
+      // Notify user about payment status update
+      try {
+        const notificationData = {
+          type: 'payment_status_update',
+          message: `Payment status of your order ${order.orderNumber || orderId} changed to '${newPaymentStatus}'.`,
+          createdAt: new Date(),
+          read: false,
+          data: { orderId, newPaymentStatus },
+          link: `/account/orders/${orderId}`,
+          linkLabel: order.orderNumber || orderId,
+        };
+        
+        // Create notification in user's subcollection
+        const userNotificationsRef = collection(db, 'users', order.userId, 'notifications');
+        await addDoc(userNotificationsRef, notificationData);
+      } catch (notifErr) {
+        console.error('Failed to create payment status update notification:', notifErr);
+      }
+      toast.success('Payment status updated successfully!');
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      toast.error('Failed to update payment status.');
+    } finally {
+      setIsUpdatingPaymentStatus(false);
     }
   };
 
@@ -307,6 +581,22 @@ export default function OrderDetailPage() {
                   </span>
                 </div>
                 <div>
+                  <p className="text-sm font-medium text-gray-500">Vendor Payout Status</p>
+                  <span
+                    className={`mt-1 inline-flex rounded-full px-3 py-1 text-base font-semibold capitalize shadow ${
+                      order.vendorPayoutStatus === 'completed'
+                        ? 'bg-green-100 text-green-800'
+                        : order.vendorPayoutStatus === 'failed'
+                          ? 'bg-red-100 text-red-800'
+                          : order.vendorPayoutStatus === 'processing'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                    }`}
+                  >
+                    {order.vendorPayoutStatus || 'pending'}
+                  </span>
+                </div>
+                <div>
                   <p className="text-sm font-medium text-gray-500">Payment Method</p>
                   <span className="mt-1 block text-lg text-gray-900">{order.paymentMethod}</span>
                 </div>
@@ -352,50 +642,289 @@ export default function OrderDetailPage() {
                 </div>
               )}
             </section>
-            {/* Payment Details */}
+            {/* Payment Details & Service Fee Breakdown */}
             {order && (
-              <section className="mb-6 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 via-yellow-50 to-pink-50 p-8 shadow">
-                <h2 className="mb-6 text-xl font-bold text-blue-900">Payment Details</h2>
-                <div className="grid grid-cols-1 gap-x-10 gap-y-6 md:grid-cols-2">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Subtotal</p>
-                    <p className="mt-1 text-lg font-semibold text-gray-900">
-                      $
-                      {(order.total - (order.deliveryFee || 0) - (order.serviceFee || 0)).toFixed(
-                        2
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Delivery Fee</p>
-                    <p className="mt-1 text-lg text-gray-900">
-                      ${order.deliveryFee ? order.deliveryFee.toFixed(2) : '0.00'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Service Fee</p>
-                    <p className="mt-1 text-lg text-gray-900">
-                      ${order.serviceFee ? order.serviceFee.toFixed(2) : '0.00'}
-                    </p>
-                  </div>
-                  {order.discountAmount && order.discountAmount > 0 && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">
-                        Discount {order.couponCode && `(${order.couponCode})`}
-                      </p>
-                      <p className="mt-1 text-lg font-semibold text-green-600">
-                        -${order.discountAmount.toFixed(2)}
-                      </p>
+              <>
+                {/* Quick Payment Summary */}
+                <section className="mb-6 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 via-yellow-50 to-pink-50 p-8 shadow">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-blue-900">Payment Summary</h2>
+                    <div className="text-right">
+                      <div className="text-sm text-gray-600">Platform Revenue</div>
+                      <div className="text-2xl font-bold text-green-600">
+                        ${order.paymentBreakdown?.platformRevenue?.toFixed(2) || 
+                          (() => {
+                            const customerServiceFee = order.serviceFee || 0;
+                            const subtotal = order.total - (order.deliveryFee || 0) - customerServiceFee;
+                            const vendorPayoutBeforeFee = subtotal - (order.discountAmount || 0);
+                            const vendorProcessingFee = vendorPayoutBeforeFee * 0.1;
+                            return (customerServiceFee + vendorProcessingFee).toFixed(2);
+                          })()}
+                      </div>
                     </div>
-                  )}
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Grand Total</p>
-                    <p className="mt-1 text-2xl font-extrabold text-blue-700">
-                      ${order.total.toFixed(2)}
-                    </p>
                   </div>
-                </div>
-              </section>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="rounded-xl bg-white p-4 shadow-sm">
+                      <div className="text-sm text-gray-600 mb-1">Customer Pays</div>
+                      <div className="text-xl font-bold text-blue-600">
+                        ${order.paymentBreakdown?.totalChargedToCustomer?.toFixed(2) || order.total.toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Including all fees and charges
+                      </div>
+                    </div>
+                    
+                    <div className="rounded-xl bg-white p-4 shadow-sm">
+                      <div className="text-sm text-gray-600 mb-1">Vendor Receives</div>
+                      <div className="text-xl font-bold text-purple-600">
+                        ${order.paymentBreakdown?.vendorPayoutAmount?.toFixed(2) || 
+                          (() => {
+                            const subtotal = order.total - (order.deliveryFee || 0) - (order.serviceFee || 0);
+                            const vendorPayoutBeforeFee = subtotal - (order.discountAmount || 0);
+                            const vendorProcessingFee = vendorPayoutBeforeFee * 0.1;
+                            return (vendorPayoutBeforeFee - vendorProcessingFee).toFixed(2);
+                          })()}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        After platform fees
+                      </div>
+                    </div>
+                    
+                    <div className="rounded-xl bg-white p-4 shadow-sm">
+                      <div className="text-sm text-gray-600 mb-1">Platform Revenue</div>
+                      <div className="text-xl font-bold text-green-600">
+                        ${order.paymentBreakdown?.platformRevenue?.toFixed(2) || 
+                          ((order.serviceFee || 0) + (order.vendorProcessingFee || 0)).toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Service + Processing fees
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Service Fee Breakdown */}
+                <section className="mb-6 rounded-2xl border border-green-100 bg-gradient-to-r from-green-50 to-emerald-50 p-8 shadow">
+                  <h2 className="mb-6 flex items-center gap-2 text-xl font-bold text-green-900">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-200 text-2xl font-bold text-green-700 shadow">
+                      💰
+                    </span>
+                    Service Fee Breakdown
+                  </h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Customer Service Fee */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-blue-900 border-b border-blue-200 pb-2">
+                        💳 Customer Service Fee (10%)
+                      </h3>
+                      <div className="space-y-3 rounded-xl bg-blue-50 p-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700">Order Subtotal:</span>
+                          <span className="font-semibold">${order.paymentBreakdown?.subtotal?.toFixed(2) || 
+                            (order.total - (order.deliveryFee || 0) - (order.serviceFee || 0)).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700">Service Fee (10%):</span>
+                          <span className="font-semibold text-blue-600">+${order.paymentBreakdown?.customerServiceFee?.toFixed(2) || 
+                            (order.serviceFee || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700">Delivery Fee:</span>
+                          <span className="font-semibold">+${order.deliveryFee?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        {order.discountAmount && order.discountAmount > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-700">Discount:</span>
+                            <span className="font-semibold text-green-600">-${order.discountAmount.toFixed(2)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center border-t border-blue-200 pt-3">
+                          <span className="text-lg font-bold text-blue-900">Customer Pays:</span>
+                          <span className="text-xl font-bold text-blue-900">${order.paymentBreakdown?.totalChargedToCustomer?.toFixed(2) || 
+                            order.total.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Vendor Processing Fee */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-purple-900 border-b border-purple-200 pb-2">
+                        🏪 Vendor Processing Fee (10%)
+                      </h3>
+                      <div className="space-y-3 rounded-xl bg-purple-50 p-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700">Order Subtotal:</span>
+                          <span className="font-semibold">${order.paymentBreakdown?.subtotal?.toFixed(2) || 
+                            (order.total - (order.deliveryFee || 0) - (order.serviceFee || 0)).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700">Processing Fee (10% of payout):</span>
+                          <span className="font-semibold text-red-600">-${order.paymentBreakdown?.vendorProcessingFee?.toFixed(2) || 
+                            (() => {
+                              // Calculate vendor processing fee as 10% of payout amount (after discounts)
+                              const subtotal = order.total - (order.deliveryFee || 0) - (order.serviceFee || 0);
+                              const vendorPayoutBeforeFee = subtotal - (order.discountAmount || 0);
+                              return (vendorPayoutBeforeFee * 0.1).toFixed(2);
+                            })()}</span>
+                        </div>
+                        {order.discountAmount && order.discountAmount > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-700">Discount Impact:</span>
+                            <span className="font-semibold text-red-600">-${order.discountAmount.toFixed(2)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center border-t border-purple-200 pt-3">
+                          <span className="text-lg font-bold text-purple-900">Vendor Receives:</span>
+                          <span className="text-xl font-bold text-purple-900">${order.paymentBreakdown?.vendorPayoutAmount?.toFixed(2) || 
+                            (() => {
+                              // Calculate vendor payout amount correctly
+                              const subtotal = order.total - (order.deliveryFee || 0) - (order.serviceFee || 0);
+                              const vendorPayoutBeforeFee = subtotal - (order.discountAmount || 0);
+                              const vendorProcessingFee = vendorPayoutBeforeFee * 0.1;
+                              return (vendorPayoutBeforeFee - vendorProcessingFee).toFixed(2);
+                            })()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Platform Revenue Summary */}
+                  <div className="mt-6 rounded-xl bg-gradient-to-r from-yellow-100 to-orange-100 p-4 border border-yellow-200">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="text-lg font-semibold text-yellow-900">Total Platform Revenue</h4>
+                        <p className="text-sm text-yellow-700">
+                          Customer Service Fee + Vendor Processing Fee
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-yellow-900">
+                          ${order.paymentBreakdown?.platformRevenue?.toFixed(2) || 
+                            (() => {
+                              // Calculate total platform revenue correctly
+                              const customerServiceFee = order.serviceFee || 0;
+                              const subtotal = order.total - (order.deliveryFee || 0) - customerServiceFee;
+                              const vendorPayoutBeforeFee = subtotal - (order.discountAmount || 0);
+                              const vendorProcessingFee = vendorPayoutBeforeFee * 0.1;
+                              return (customerServiceFee + vendorProcessingFee).toFixed(2);
+                            })()}
+                        </div>
+                        <div className="text-sm text-yellow-700">
+                          ${order.paymentBreakdown?.customerServiceFee?.toFixed(2) || (order.serviceFee || 0).toFixed(2)} + ${order.paymentBreakdown?.vendorProcessingFee?.toFixed(2) || (() => {
+                            const subtotal = order.total - (order.deliveryFee || 0) - (order.serviceFee || 0);
+                            const vendorPayoutBeforeFee = subtotal - (order.discountAmount || 0);
+                            return (vendorPayoutBeforeFee * 0.1).toFixed(2);
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Detailed Payment Breakdown */}
+                {order.paymentBreakdown && (
+                  <PaymentBreakdownDisplay paymentBreakdown={order.paymentBreakdown} className="mb-6" />
+                )}
+
+                {/* Revenue Analytics */}
+                <section className="mb-6 rounded-2xl border border-orange-100 bg-gradient-to-r from-orange-50 to-yellow-50 p-8 shadow">
+                  <h2 className="mb-6 flex items-center gap-2 text-xl font-bold text-orange-900">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-orange-200 text-2xl font-bold text-orange-700 shadow">
+                      📊
+                    </span>
+                    Revenue Analytics
+                  </h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="rounded-xl bg-white p-4 text-center shadow-sm">
+                      <div className="text-sm text-gray-600 mb-1">Order Value</div>
+                      <div className="text-xl font-bold text-blue-600">
+                        ${order.paymentBreakdown?.subtotal?.toFixed(2) || 
+                          (order.total - (order.deliveryFee || 0) - (order.serviceFee || 0)).toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">Before fees</div>
+                    </div>
+                    
+                    <div className="rounded-xl bg-white p-4 text-center shadow-sm">
+                      <div className="text-sm text-gray-600 mb-1">Customer Fee</div>
+                      <div className="text-xl font-bold text-green-600">
+                        ${order.paymentBreakdown?.customerServiceFee?.toFixed(2) || 
+                          (order.serviceFee || 0).toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">10% of subtotal</div>
+                    </div>
+                    
+                    <div className="rounded-xl bg-white p-4 text-center shadow-sm">
+                      <div className="text-sm text-gray-600 mb-1">Vendor Fee</div>
+                      <div className="text-xl font-bold text-purple-600">
+                        ${order.paymentBreakdown?.vendorProcessingFee?.toFixed(2) || 
+                          (() => {
+                            const subtotal = order.total - (order.deliveryFee || 0) - (order.serviceFee || 0);
+                            const vendorPayoutBeforeFee = subtotal - (order.discountAmount || 0);
+                            return (vendorPayoutBeforeFee * 0.1).toFixed(2);
+                          })()}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">10% of payout amount</div>
+                    </div>
+                    
+                    <div className="rounded-xl bg-white p-4 text-center shadow-sm">
+                      <div className="text-sm text-gray-600 mb-1">Total Revenue</div>
+                      <div className="text-xl font-bold text-orange-600">
+                        ${order.paymentBreakdown?.platformRevenue?.toFixed(2) || 
+                          (() => {
+                            const customerServiceFee = order.serviceFee || 0;
+                            const subtotal = order.total - (order.deliveryFee || 0) - customerServiceFee;
+                            const vendorPayoutBeforeFee = subtotal - (order.discountAmount || 0);
+                            const vendorProcessingFee = vendorPayoutBeforeFee * 0.1;
+                            return (customerServiceFee + vendorProcessingFee).toFixed(2);
+                          })()}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">Variable (10% + 10%)</div>
+                    </div>
+                  </div>
+
+                  {/* Revenue Breakdown Chart */}
+                  <div className="mt-6 rounded-xl bg-white p-4 shadow-sm">
+                    <div className="text-sm font-semibold text-gray-800 mb-3">Revenue Distribution</div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Vendor Payout</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-purple-600 h-2 rounded-full" 
+                              style={{ 
+                                width: `${((order.paymentBreakdown?.vendorPayoutAmount || 0) / (order.paymentBreakdown?.subtotal || 1)) * 100}%` 
+                              }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-semibold text-purple-600">
+                            {((order.paymentBreakdown?.vendorPayoutAmount || 0) / (order.paymentBreakdown?.subtotal || 1) * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Platform Revenue</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-orange-600 h-2 rounded-full" 
+                              style={{ 
+                                width: `${((order.paymentBreakdown?.platformRevenue || 0) / (order.paymentBreakdown?.subtotal || 1)) * 100}%` 
+                              }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-semibold text-orange-600">
+                            {((order.paymentBreakdown?.platformRevenue || 0) / (order.paymentBreakdown?.subtotal || 1) * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </>
             )}
             {/* Update Status Section (Admin/Vendor) */}
             {(isAdminOrManager || isVendorOwner) && (
@@ -422,6 +951,98 @@ export default function OrderDetailPage() {
                 >
                   {isUpdatingStatus ? 'Updating...' : 'Save Status'}
                 </button>
+              </section>
+            )}
+
+            {/* Payment Management Section (Admin Only) */}
+            {isAdminOrManager && (
+              <section className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow">
+                <h3 className="text-lg font-semibold text-gray-900">Payment Management</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Customer Payment Status */}
+                  <div className="space-y-4">
+                    <h4 className="text-md font-semibold text-blue-900">Customer Payment Status</h4>
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                      <label htmlFor="paymentStatus" className="text-sm font-medium text-gray-700">
+                        Update Payment Status:
+                      </label>
+                      <select
+                        id="paymentStatus"
+                        value={newPaymentStatus}
+                        onChange={(e) => setNewPaymentStatus(e.target.value as Order['paymentStatus'])}
+                        className="block w-48 rounded-xl border-gray-300 shadow focus:border-yellow-400 focus:ring-yellow-400"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                      </select>
+                      <button
+                        onClick={handlePaymentStatusChange}
+                        disabled={isUpdatingPaymentStatus}
+                        className="inline-flex justify-center rounded-xl border border-gray-200 bg-gradient-to-r from-green-100 via-blue-100 to-purple-100 px-4 py-2 font-semibold text-gray-900 shadow hover:bg-green-200 focus:ring-2 focus:ring-green-400 focus:outline-none disabled:opacity-50"
+                      >
+                        {isUpdatingPaymentStatus ? 'Updating...' : 'Save Payment Status'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Vendor Payout Status */}
+                  <div className="space-y-4">
+                    <h4 className="text-md font-semibold text-purple-900">Vendor Payout Status</h4>
+                    <div className="rounded-xl bg-purple-50 p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-gray-700">Current Status</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          order.vendorPayoutStatus === 'completed' ? 'bg-green-100 text-green-800' :
+                          order.vendorPayoutStatus === 'processing' ? 'bg-blue-100 text-blue-800' :
+                          order.vendorPayoutStatus === 'failed' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {order.vendorPayoutStatus || 'pending'}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600 mb-3">
+                        {order.vendorPayoutStatus === 'completed' ? 'Payment has been processed and sent to vendor.' :
+                         order.vendorPayoutStatus === 'processing' ? 'Payment is being processed and will be sent soon.' :
+                         order.vendorPayoutStatus === 'failed' ? 'Payment processing failed. Please contact vendor.' :
+                         'Payment will be processed after order delivery or cancellation.'}
+                      </div>
+                      {order.vendorPayoutDate && (
+                        <div className="text-xs text-gray-500">
+                          Payout Date: {order.vendorPayoutDate.toLocaleDateString()} {order.vendorPayoutDate.toLocaleTimeString()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payout Action Buttons */}
+                {order.status === 'delivered' && order.vendorPayoutStatus !== 'completed' && (
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="text-md font-semibold text-green-900 mb-3">Payout Actions</h4>
+                    <div className="flex gap-3">
+                      <button
+                        className="inline-flex justify-center rounded-xl border border-green-200 bg-green-100 px-4 py-2 font-semibold text-green-800 shadow hover:bg-green-200 focus:ring-2 focus:ring-green-400 focus:outline-none"
+                        onClick={() => {
+                          // TODO: Implement vendor payout processing
+                          toast.success('Vendor payout processing feature coming soon!');
+                        }}
+                      >
+                        Process Vendor Payout
+                      </button>
+                      <button
+                        className="inline-flex justify-center rounded-xl border border-blue-200 bg-blue-100 px-4 py-2 font-semibold text-blue-800 shadow hover:bg-blue-200 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                        onClick={() => {
+                          // TODO: Implement payout details view
+                          toast.success('Payout details view coming soon!');
+                        }}
+                      >
+                        View Payout Details
+                      </button>
+                    </div>
+                  </div>
+                )}
               </section>
             )}
             {/* Vendor Info */}
@@ -525,6 +1146,53 @@ export default function OrderDetailPage() {
                 </div>
               </div>
             </section>
+            
+            {/* Pickup Address Section */}
+            {order.deliveryOption === 'pickup' && order.pickupAddress && (
+              <section className="mb-6 flex flex-col rounded-2xl border border-yellow-100 bg-gradient-to-r from-yellow-50 via-orange-50 to-red-50 p-8 shadow">
+                <div className="mb-6 flex items-center gap-3">
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 text-2xl font-bold text-yellow-600 shadow">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-7 w-7"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17.657 16.657L13.414 12.414a2 2 0 00-2.828 0l-4.243 4.243M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                  </span>
+                  <h2 className="text-xl font-bold text-yellow-900">Pickup Address</h2>
+                </div>
+                <div className="grid grid-cols-1 gap-x-10 gap-y-2 md:grid-cols-2">
+                  <div className="mb-4">
+                    <p className="mb-1 text-lg font-bold text-gray-900">Vendor Pickup Location</p>
+                    <p className="mb-1 text-sm font-medium text-yellow-700">Customer will pick up from this address</p>
+                  </div>
+                  <div className="text-base text-gray-700">
+                    {order.pickupAddress.street && <div>{order.pickupAddress.street}</div>}
+                    <div>
+                      {order.pickupAddress.city && <span>{order.pickupAddress.city}, </span>}
+                      {order.pickupAddress.state && <span>{order.pickupAddress.state} - </span>}
+                      {order.pickupAddress.zipCode && <span>{order.pickupAddress.zipCode}</span>}
+                    </div>
+                    {order.pickupAddress.country && <div>{order.pickupAddress.country}</div>}
+                    {order.pickupAddress.phoneNumber && (
+                      <div className="mt-2 text-sm text-gray-600">
+                        Phone:{' '}
+                        <span className="font-semibold">{formatPhoneForDisplay(order.pickupAddress.phoneNumber)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+            )}
+            
             {/* Ordered Items */}
             <section className="mb-6 rounded-2xl border border-yellow-100 bg-gradient-to-r from-yellow-50 via-pink-50 to-blue-50 p-8 shadow">
               <h2 className="mb-6 text-xl font-bold text-yellow-900">Ordered Items</h2>
@@ -557,6 +1225,9 @@ export default function OrderDetailPage() {
                 ))}
               </div>
             </section>
+
+            {/* Activity Log */}
+            <OrderActivityLog activities={order.activityLog || []} />
           </div>
         </div>
       </div>

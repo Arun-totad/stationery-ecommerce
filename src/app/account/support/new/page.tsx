@@ -15,6 +15,7 @@ import {
 import { db } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
 import { UserRole } from '@/types';
+import { addOrderActivity } from '@/lib/orderActivity';
 
 export default function NewSupportTicketPage() {
   const { user } = useAuth();
@@ -109,8 +110,7 @@ export default function NewSupportTicketPage() {
 
       // Create notification for ticket creation
       try {
-        await addDoc(collection(db, 'notifications'), {
-          userId: user.uid,
+        const notificationData = {
           type: 'support_ticket_created',
           message: `Support ticket "${subject}" has been created successfully.`,
           createdAt: new Date(),
@@ -118,9 +118,30 @@ export default function NewSupportTicketPage() {
           data: { ticketId, ticketNumber: ticketId },
           link: `/account/support/${ticketId}`,
           linkLabel: ticketId,
-        });
+        };
+        
+        // Create notification in user's subcollection
+        const userNotificationsRef = collection(db, 'users', user.uid, 'notifications');
+        await addDoc(userNotificationsRef, notificationData);
       } catch (notifErr) {
         console.error('Failed to create notification:', notifErr);
+      }
+
+      // Add activity log to the order if this ticket is associated with an order
+      if (orderId) {
+        try {
+          await addOrderActivity(
+            orderId,
+            'support_ticket_created',
+            `Support ticket created: ${subject}`,
+            user.uid,
+            user.role || 'customer',
+            undefined,
+            ticketId
+          );
+        } catch (activityErr) {
+          console.error('Failed to add support ticket activity to order:', activityErr);
+        }
       }
 
       toast.success('Support ticket created!');

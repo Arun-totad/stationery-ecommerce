@@ -122,8 +122,7 @@ export default function UserOrderDetailPage() {
       
       // Add notification for order cancellation
       try {
-        await addDoc(collection(db, 'notifications'), {
-          userId: user.uid,
+        const notificationData = {
           type: 'order_status_update',
           message: `Your order ${order.orderNumber || order.id} has been cancelled successfully.`,
           createdAt: new Date(),
@@ -131,7 +130,11 @@ export default function UserOrderDetailPage() {
           data: { orderId: order.id, newStatus: 'cancelled' },
           link: `/account/orders/${order.id}`,
           linkLabel: order.orderNumber || order.id,
-        });
+        };
+        
+        // Create notification in user's subcollection
+        const userNotificationsRef = collection(db, 'users', user.uid, 'notifications');
+        await addDoc(userNotificationsRef, notificationData);
       } catch (notifErr) {
         console.error('Failed to create cancellation notification:', notifErr);
       }
@@ -420,7 +423,7 @@ export default function UserOrderDetailPage() {
             </div>
             <div className="mb-4 flex items-center justify-between text-sm text-gray-700">
               <span>
-                Service Fee <span className="ml-2 text-xs text-gray-500">(2% of subtotal)</span>
+                Service Fee <span className="ml-2 text-xs text-gray-500">(10% of subtotal)</span>
               </span>
               <span className="font-semibold">${serviceFee.toFixed(2)}</span>
             </div>
@@ -665,6 +668,80 @@ export default function UserOrderDetailPage() {
             </div>
           </div>
         </div>
+        
+        {/* Pickup Address Section */}
+        {order.deliveryOption === 'pickup' && order.pickupAddress && (
+          <>
+            <h2 className="animate-fade-in-up mb-3 flex items-center gap-2 text-xl font-bold">
+              <svg
+                className="h-5 w-5 text-yellow-500"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path d="M17.657 16.657L13.414 12.414a2 2 0 00-2.828 0l-4.243 4.243M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span className="bg-gradient-to-r from-yellow-500 to-orange-400 bg-clip-text text-transparent">
+                Pickup Address
+              </span>
+            </h2>
+            <div
+              className="animate-fade-in-up relative flex flex-col gap-2 rounded-2xl border-2 border-transparent bg-gradient-to-br from-yellow-50 via-orange-50 to-white p-6 text-gray-900 shadow-lg"
+              style={{ borderImage: 'linear-gradient(90deg, #EAB308 0%, #F97316 100%) 1' }}
+            >
+              <div className="absolute -top-5 left-5 rounded-full bg-gradient-to-br from-yellow-400 to-orange-400 p-2 shadow-md">
+                <svg
+                  className="h-6 w-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z" />
+                </svg>
+              </div>
+              <div className="pl-10">
+                {order.pickupAddress?.street && (
+                  <div className="mb-1 text-lg font-semibold">{order.pickupAddress.street}</div>
+                )}
+                <div className="mb-1 text-base">
+                  {order.pickupAddress?.city}, {order.pickupAddress?.state} -{' '}
+                  {order.pickupAddress?.zipCode}
+                </div>
+                <div className="mb-1 flex items-center gap-2 text-base">
+                  <svg
+                    className="h-4 w-4 text-yellow-400"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z" />
+                  </svg>
+                  <span className="font-medium text-yellow-700">{order.pickupAddress?.country}</span>
+                </div>
+                {order.pickupAddress?.phoneNumber && (
+                  <div className="mt-2 flex items-center gap-2 text-base">
+                    <svg
+                      className="h-4 w-4 text-green-500"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M22 16.92V19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-2.08a2 2 0 0 1 .84-1.63l8-5.33a2 2 0 0 1 2.32 0l8 5.33a2 2 0 0 1 .84 1.63z" />
+                    </svg>
+                    <span className="font-semibold text-green-700">
+                      {formatPhoneForDisplay(order.pickupAddress.phoneNumber)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+        
         {/* Cancel Order Modal */}
         <ConfirmModal
           isOpen={showCancelModal}

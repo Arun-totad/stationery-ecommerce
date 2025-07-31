@@ -20,6 +20,9 @@ import {
   InformationCircleIcon,
   UserPlusIcon,
   TicketIcon,
+  ClockIcon,
+  TruckIcon,
+  XCircleIcon,
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -132,11 +135,9 @@ export default function Header() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     if (user) {
-      const q = query(
-        collection(db, 'notifications'), 
-        where('userId', '==', user.uid),
-        orderBy('createdAt', 'desc')
-      );
+      // Read notifications from user's subcollection
+      const userNotificationsRef = collection(db, 'users', user.uid, 'notifications');
+      const q = query(userNotificationsRef, orderBy('createdAt', 'desc'));
       unsubscribe = onSnapshot(q, (snapshot) => {
         const notifs = snapshot.docs.map((doc) => {
           const data = doc.data();
@@ -162,7 +163,6 @@ export default function Header() {
           
           return {
             id: doc.id,
-            userId: data.userId,
             type: data.type,
             message: data.message,
             createdAt: createdAt,
@@ -258,11 +258,31 @@ export default function Header() {
     // Mark all as read
     const unread = notifications.filter((n) => !n.read);
     for (const notif of unread) {
-      await updateDoc(doc(db, 'notifications', notif.id), { read: true });
+      await updateDoc(doc(db, 'users', user.uid, 'notifications', notif.id), { read: true });
     }
   };
 
-  const getNotificationIcon = (type: string) => {
+  const getNotificationIcon = (type: string, data?: any) => {
+    // For order status updates, use different icons based on the status
+    if (type === 'order_status_update' && data?.newStatus) {
+      const status = data.newStatus;
+      switch (status) {
+        case 'pending':
+          return <ClockIcon className="h-5 w-5 text-yellow-500" />;
+        case 'processing':
+          return <InformationCircleIcon className="h-5 w-5 text-blue-500" />;
+        case 'shipped':
+          return <TruckIcon className="h-5 w-5 text-purple-500" />;
+        case 'delivered':
+          return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
+        case 'cancelled':
+          return <XCircleIcon className="h-5 w-5 text-red-500" />;
+        default:
+          return <InformationCircleIcon className="h-5 w-5 text-blue-500" />;
+      }
+    }
+
+    // For other notification types
     switch (type) {
       case 'order_placed':
         return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
@@ -287,7 +307,44 @@ export default function Header() {
     }
   };
 
-  const getNotificationBackground = (type: string, isUnread: boolean) => {
+  const getNotificationBackground = (type: string, isUnread: boolean, data?: any) => {
+    // For order status updates, use different colors based on the status
+    if (type === 'order_status_update' && data?.newStatus) {
+      const status = data.newStatus;
+      if (isUnread) {
+        switch (status) {
+          case 'pending':
+            return 'bg-yellow-50';
+          case 'processing':
+            return 'bg-blue-50';
+          case 'shipped':
+            return 'bg-purple-50';
+          case 'delivered':
+            return 'bg-green-50';
+          case 'cancelled':
+            return 'bg-red-50';
+          default:
+            return 'bg-yellow-50';
+        }
+      } else {
+        switch (status) {
+          case 'pending':
+            return 'bg-yellow-100';
+          case 'processing':
+            return 'bg-blue-100';
+          case 'shipped':
+            return 'bg-purple-100';
+          case 'delivered':
+            return 'bg-green-100';
+          case 'cancelled':
+            return 'bg-red-100';
+          default:
+            return 'bg-yellow-100';
+        }
+      }
+    }
+
+    // For other notification types
     if (isUnread) {
       switch (type) {
         case 'order_placed':
@@ -337,7 +394,44 @@ export default function Header() {
     }
   };
 
-  const getNotificationBorderColor = (type: string, isUnread: boolean) => {
+  const getNotificationBorderColor = (type: string, isUnread: boolean, data?: any) => {
+    // For order status updates, use different colors based on the status
+    if (type === 'order_status_update' && data?.newStatus) {
+      const status = data.newStatus;
+      if (isUnread) {
+        switch (status) {
+          case 'pending':
+            return 'bg-yellow-500';
+          case 'processing':
+            return 'bg-blue-500';
+          case 'shipped':
+            return 'bg-purple-500';
+          case 'delivered':
+            return 'bg-green-500';
+          case 'cancelled':
+            return 'bg-red-500';
+          default:
+            return 'bg-yellow-500';
+        }
+      } else {
+        switch (status) {
+          case 'pending':
+            return 'bg-yellow-400';
+          case 'processing':
+            return 'bg-blue-400';
+          case 'shipped':
+            return 'bg-purple-400';
+          case 'delivered':
+            return 'bg-green-400';
+          case 'cancelled':
+            return 'bg-red-400';
+          default:
+            return 'bg-yellow-400';
+        }
+      }
+    }
+
+    // For other notification types
     if (isUnread) {
       switch (type) {
         case 'order_placed':
@@ -406,6 +500,15 @@ export default function Header() {
     }
     if (itemName === 'Dashboard') {
       return pathname === '/admin' && !currentView;
+    }
+    if (itemName === 'Orders') {
+      return currentView === 'orders';
+    }
+    if (itemName === 'Transactions') {
+      return currentView === 'transactions';
+    }
+    if (itemName === 'Coupons') {
+      return pathname === '/admin/coupons';
     }
     if (itemName === 'Support Tickets') {
       return pathname === itemHref;
@@ -511,19 +614,19 @@ export default function Header() {
                             key={notif.id}
                             className={`group relative border-b border-gray-100 px-4 py-3 transition-all duration-200 hover:bg-gray-50 ${
                               !notif.read 
-                                ? getNotificationBackground(notif.type, true) 
-                                : getNotificationBackground(notif.type, false)
+                                ? getNotificationBackground(notif.type, true, notif.data) 
+                                : getNotificationBackground(notif.type, false, notif.data)
                             }`}
                           >
                             {/* Unread indicator */}
                             {!notif.read && (
-                              <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-r-full ${getNotificationBorderColor(notif.type, true)}`} />
+                              <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-r-full ${getNotificationBorderColor(notif.type, true, notif.data)}`} />
                             )}
                             
                             <div className="flex items-start gap-3">
                               {/* Icon */}
                               <div className="flex-shrink-0 mt-0.5">
-                                {getNotificationIcon(notif.type)}
+                                {getNotificationIcon(notif.type, notif.data)}
                               </div>
                               
                               {/* Content */}

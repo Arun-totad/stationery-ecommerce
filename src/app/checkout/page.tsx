@@ -33,7 +33,7 @@ declare global {
   }
 }
 
-const SERVICE_FEE_PERCENT = 2;
+const SERVICE_FEE_PERCENT = 10;
 
 export default function CheckoutPage() {
   const { user, loading, refreshUserData } = useAuth();
@@ -309,7 +309,8 @@ export default function CheckoutPage() {
 
     // Verify cart document exists and is accessible
     try {
-      const cartDocRef = doc(db, 'carts', user.uid);
+              // Use user's cart subcollection
+        const cartDocRef = doc(db, 'users', user.uid, 'cart', 'current');
       const cartDocSnap = await getDoc(cartDocRef);
       if (!cartDocSnap.exists()) {
         console.error('Cart document does not exist in Firestore');
@@ -519,8 +520,7 @@ export default function CheckoutPage() {
         // Only create notifications after successful batch commit
         for (let i = 0; i < orderNumbers.length; i++) {
           try {
-            await addDoc(collection(db, 'notifications'), {
-              userId: user.uid,
+            const notificationData = {
               type: 'order_placed',
               message: 'Your order has been placed successfully!',
               createdAt: new Date(),
@@ -528,7 +528,11 @@ export default function CheckoutPage() {
               data: { orderNumber: orderNumbers[i] },
               link: `/account/orders/${orderRefs[i].id}`,
               linkLabel: orderNumbers[i],
-            });
+            };
+            
+            // Create notification in user's subcollection
+            const userNotificationsRef = collection(db, 'users', user.uid, 'notifications');
+            await addDoc(userNotificationsRef, notificationData);
           } catch (notifErr) {
             console.error('Failed to create notification for order:', orderNumbers[i], notifErr);
             // Don't fail the entire order process if notification creation fails

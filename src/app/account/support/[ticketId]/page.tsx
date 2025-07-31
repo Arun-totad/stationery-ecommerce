@@ -125,8 +125,7 @@ export default function AccountSupportTicketDetailPage() {
           ? `New message in support ticket "${ticket.subject}"`
           : `New message from customer in ticket "${ticket.subject}"`;
         
-        await addDoc(collection(db, 'notifications'), {
-          userId: ticket.userId, // Notify the ticket owner
+        const notificationData = {
           type: 'support_message',
           message: notificationMessage,
           createdAt: new Date(),
@@ -134,7 +133,11 @@ export default function AccountSupportTicketDetailPage() {
           data: { ticketId, ticketNumber: ticket.id },
           link: `/account/support/${ticketId}`,
           linkLabel: ticket.id,
-        });
+        };
+        
+        // Create notification in user's subcollection
+        const userNotificationsRef = collection(db, 'users', ticket.userId, 'notifications');
+        await addDoc(userNotificationsRef, notificationData);
       } catch (notifErr) {
         console.error('Failed to create notification:', notifErr);
       }
@@ -183,8 +186,7 @@ export default function AccountSupportTicketDetailPage() {
 
       // Create notification for ticket reopening
       try {
-        await addDoc(collection(db, 'notifications'), {
-          userId: ticket.userId,
+        const notificationData = {
           type: 'support_ticket_reopened',
           message: `Support ticket "${ticket.subject}" has been reopened.`,
           createdAt: new Date(),
@@ -192,7 +194,11 @@ export default function AccountSupportTicketDetailPage() {
           data: { ticketId, ticketNumber: ticket.id },
           link: `/account/support/${ticketId}`,
           linkLabel: ticket.id,
-        });
+        };
+        
+        // Create notification in user's subcollection
+        const userNotificationsRef = collection(db, 'users', ticket.userId, 'notifications');
+        await addDoc(userNotificationsRef, notificationData);
       } catch (notifErr) {
         console.error('Failed to create notification:', notifErr);
       }
@@ -251,8 +257,7 @@ export default function AccountSupportTicketDetailPage() {
 
       // Create notification for ticket closing
       try {
-        await addDoc(collection(db, 'notifications'), {
-          userId: ticket.userId,
+        const notificationData = {
           type: 'support_ticket_closed',
           message: `Support ticket "${ticket.subject}" has been closed.`,
           createdAt: new Date(),
@@ -260,7 +265,11 @@ export default function AccountSupportTicketDetailPage() {
           data: { ticketId, ticketNumber: ticket.id },
           link: `/account/support/${ticketId}`,
           linkLabel: ticket.id,
-        });
+        };
+        
+        // Create notification in user's subcollection
+        const userNotificationsRef = collection(db, 'users', ticket.userId, 'notifications');
+        await addDoc(userNotificationsRef, notificationData);
       } catch (notifErr) {
         console.error('Failed to create notification:', notifErr);
       }

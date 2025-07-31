@@ -8,6 +8,7 @@ import { doc, getDoc, updateDoc, arrayUnion, Timestamp, addDoc, collection } fro
 import { db } from '@/lib/firebase';
 import { SupportTicket, Message, UserRole } from '@/types';
 import { toast } from 'react-hot-toast';
+import { addOrderActivity } from '@/lib/orderActivity';
 import Link from 'next/link';
 
 export default function AdminSupportTicketDetailPage() {
@@ -118,8 +119,7 @@ export default function AdminSupportTicketDetailPage() {
 
       // Create notification for admin response
       try {
-        await addDoc(collection(db, 'notifications'), {
-          userId: ticket.userId, // Notify the ticket owner
+        const notificationData = {
           type: 'support_admin_response',
           message: `Admin has responded to your support ticket "${ticket.subject}".`,
           createdAt: new Date(),
@@ -127,7 +127,11 @@ export default function AdminSupportTicketDetailPage() {
           data: { ticketId, ticketNumber: ticket.id },
           link: `/account/support/${ticket.id}`,
           linkLabel: ticket.id,
-        });
+        };
+        
+        // Create notification in user's subcollection
+        const userNotificationsRef = collection(db, 'users', ticket.userId, 'notifications');
+        await addDoc(userNotificationsRef, notificationData);
       } catch (notifErr) {
         console.error('Failed to create notification:', notifErr);
       }
@@ -140,6 +144,24 @@ export default function AdminSupportTicketDetailPage() {
           updatedAt: message.timestamp,
         };
       });
+
+      // Add activity log to the order if this ticket is associated with an order
+      if (ticket.orderId) {
+        try {
+          await addOrderActivity(
+            ticket.orderId,
+            'support_admin_response',
+            `Admin responded to support ticket: ${ticket.subject}`,
+            user.uid,
+            userRole || 'admin',
+            undefined,
+            'Admin response added'
+          );
+        } catch (activityErr) {
+          console.error('Failed to add admin response activity to order:', activityErr);
+        }
+      }
+
       setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
@@ -168,8 +190,7 @@ export default function AdminSupportTicketDetailPage() {
           'closed': 'closed'
         };
         
-        await addDoc(collection(db, 'notifications'), {
-          userId: ticket.userId, // Notify the ticket owner
+        const notificationData = {
           type: 'support_status_update',
           message: `Your support ticket "${ticket.subject}" has been ${statusMessages[status]}.`,
           createdAt: new Date(),
@@ -177,7 +198,11 @@ export default function AdminSupportTicketDetailPage() {
           data: { ticketId, ticketNumber: ticket.id, newStatus: status },
           link: `/account/support/${ticket.id}`,
           linkLabel: ticket.id,
-        });
+        };
+        
+        // Create notification in user's subcollection
+        const userNotificationsRef = collection(db, 'users', ticket.userId, 'notifications');
+        await addDoc(userNotificationsRef, notificationData);
       } catch (notifErr) {
         console.error('Failed to create notification:', notifErr);
       }
@@ -190,6 +215,31 @@ export default function AdminSupportTicketDetailPage() {
           updatedAt: Timestamp.now().toDate(),
         };
       });
+
+      // Add activity log to the order if this ticket is associated with an order
+      if (ticket.orderId) {
+        try {
+          const statusMessages = {
+            'open': 'opened',
+            'in-progress': 'marked as in progress',
+            'resolved': 'resolved',
+            'closed': 'closed'
+          };
+          
+          await addOrderActivity(
+            ticket.orderId,
+            'support_ticket_status_changed',
+            `Support ticket status ${statusMessages[status]}: ${ticket.subject}`,
+            user.uid,
+            userRole || 'admin',
+            ticket.status,
+            status
+          );
+        } catch (activityErr) {
+          console.error('Failed to add support ticket status change activity to order:', activityErr);
+        }
+      }
+
       toast.success(`Ticket status updated to ${status}.`);
     } catch (error) {
       console.error('Error updating ticket status:', error);

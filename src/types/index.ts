@@ -73,6 +73,28 @@ export interface Cart {
   updatedAt: Date;
 }
 
+export interface OrderActivity {
+  id: string;
+  action: string;
+  description: string;
+  performedBy: string; // User ID who performed the action
+  performedByRole: UserRole; // Role of the user who performed the action
+  timestamp: Date;
+  previousValue?: string | null; // Previous status/value before change
+  newValue?: string | null; // New status/value after change
+}
+
+export interface PaymentBreakdown {
+  subtotal: number; // Original order subtotal
+  deliveryFee: number; // Delivery fee charged to customer
+  customerServiceFee: number; // 10% service fee charged to customer
+  vendorProcessingFee: number; // 10% processing fee deducted from vendor payout
+  discountAmount: number; // Discount applied (if any)
+  totalChargedToCustomer: number; // Total amount customer pays
+  vendorPayoutAmount: number; // Amount vendor receives after fees
+  platformRevenue: number; // Total platform revenue (customer fee + vendor fee)
+}
+
 export interface Order {
   id: string;
   userId: string;
@@ -92,10 +114,16 @@ export interface Order {
   customerEmail?: string;
   orderNumber?: string; // Persistent order number
   deliveryFee?: number; // Delivery fee for the order
-  serviceFee?: number; // Service fee for the order
+  serviceFee?: number; // Service fee for the order (customer fee)
+  vendorProcessingFee?: number; // Vendor processing fee
+  paymentBreakdown?: PaymentBreakdown; // Detailed payment breakdown
   estimatedTimeArrival?: Date; // Add this field for ETA
   couponCode?: string; // Coupon code used for this order
   discountAmount?: number; // Discount amount applied to this order
+  activityLog?: OrderActivity[]; // Activity log for tracking order changes
+  vendorPayoutStatus?: 'pending' | 'processing' | 'completed' | 'failed'; // Vendor payout status
+  vendorPayoutDate?: Date; // When vendor payout was processed
+  pickupAddress?: Address; // Pickup address for pickup orders
 }
 
 export interface SupportTicket {
@@ -131,7 +159,6 @@ export interface Transaction {
 
 export interface Notification {
   id: string;
-  userId: string;
   type: 'login' | 'order_placed' | 'order_status_update' | 'account_created' | 'support_ticket_created' | 'support_message' | 'support_admin_response' | 'support_status_update' | 'support_ticket_reopened' | 'support_ticket_closed' | string;
   message: string;
   createdAt: Date;

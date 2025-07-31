@@ -13,14 +13,17 @@ import {
   updateDoc,
   arrayUnion,
   Timestamp,
+  addDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Order, SupportTicket } from '@/types';
 import { toast } from 'react-hot-toast';
 import VendorDashboardNav from '@/components/vendor/VendorDashboardNav';
+import PaymentBreakdownDisplay from '@/components/PaymentBreakdownDisplay';
 import dayjs from 'dayjs';
 import { FaUser, FaCalendarAlt, FaEdit, FaArrowLeft } from 'react-icons/fa';
 import Link from 'next/link';
+import { addOrderActivity } from '@/lib/orderActivity';
 
 export default function VendorOrderDetailPage() {
   const { user } = useAuth();
@@ -39,6 +42,16 @@ export default function VendorOrderDetailPage() {
   const [editingEta, setEditingEta] = useState(false);
   const [showAcceptPrompt, setShowAcceptPrompt] = useState(true);
   const [popoverIdx, setPopoverIdx] = useState<number | null>(null);
+  const [showPickupAddressModal, setShowPickupAddressModal] = useState(false);
+  const [pickupAddress, setPickupAddress] = useState({
+    street: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: '',
+    phoneNumber: ''
+  });
+  const [isUpdatingPickupAddress, setIsUpdatingPickupAddress] = useState(false);
 
   const fetchOrderAndTickets = async () => {
     if (!user) return;
@@ -126,8 +139,91 @@ export default function VendorOrderDetailPage() {
     if (!order) return;
     setStatusUpdating(true);
     try {
-      await updateDoc(doc(db, 'orders', order.id), { status: e.target.value });
-      setOrder((prev) => (prev ? { ...prev, status: e.target.value as Order['status'] } : prev));
+      const newStatus = e.target.value;
+
+      
+      await updateDoc(doc(db, 'orders', order.id), { status: newStatus });
+      
+      // Add activity log for status change
+      try {
+        console.log('Adding status change activity for order:', order.id, 'from', order.status, 'to', newStatus);
+        await addOrderActivity(
+          order.id,
+          'status_changed',
+          'Order status updated',
+          user.uid,
+          'vendor',
+          order.status,
+          newStatus
+        );
+        console.log('Status change activity added successfully');
+        
+        // Refresh order data to include the newly added activity
+        const orderRef = doc(db, 'orders', order.id);
+        const refreshedOrderSnap = await getDoc(orderRef);
+        if (refreshedOrderSnap.exists()) {
+          const refreshedOrderData = refreshedOrderSnap.data() as Order;
+          // Convert timestamps
+          refreshedOrderData.createdAt = refreshedOrderData.createdAt instanceof Timestamp
+            ? refreshedOrderData.createdAt.toDate()
+            : new Date(refreshedOrderData.createdAt);
+          refreshedOrderData.updatedAt = refreshedOrderData.updatedAt instanceof Timestamp
+            ? refreshedOrderData.updatedAt.toDate()
+            : new Date(refreshedOrderData.updatedAt);
+          refreshedOrderData.estimatedDeliveryDate = refreshedOrderData.estimatedDeliveryDate instanceof Timestamp
+            ? refreshedOrderData.estimatedDeliveryDate.toDate()
+            : refreshedOrderData.estimatedDeliveryDate
+              ? new Date(refreshedOrderData.estimatedDeliveryDate)
+              : undefined;
+          
+          // Convert activity log timestamps
+          if (refreshedOrderData.activityLog) {
+            refreshedOrderData.activityLog = refreshedOrderData.activityLog.map((activity: OrderActivity) => ({
+              ...activity,
+              timestamp: activity.timestamp instanceof Timestamp
+                ? activity.timestamp.toDate()
+                : new Date(activity.timestamp),
+            }));
+          }
+          
+          setOrder(refreshedOrderData);
+        }
+      } catch (activityErr) {
+        console.error('Failed to add status change activity:', activityErr);
+      }
+      
+      // Create notification for customer about status update
+      try {
+
+        
+        const statusMessages = {
+          pending: 'Your order has been placed and is pending confirmation.',
+          processing: 'Your order is now being processed by the vendor.',
+          shipped: 'Your order has been shipped and is on its way!',
+          delivered: 'Your order has been delivered successfully!',
+          cancelled: 'Your order has been cancelled.'
+        };
+        
+        const notificationData = {
+          type: 'order_status_update',
+          message: statusMessages[newStatus as keyof typeof statusMessages] || `Your order status has been updated to ${newStatus}.`,
+          createdAt: new Date(),
+          read: false,
+          data: { orderId: order.id, newStatus: newStatus },
+          link: `/account/orders/${order.id}`,
+          linkLabel: order.orderNumber || order.id,
+        };
+        
+        // Create notification in user's subcollection
+        const userNotificationsRef = collection(db, 'users', order.userId, 'notifications');
+        const notificationRef = await addDoc(userNotificationsRef, notificationData);
+        
+        toast.success(`Order status updated to ${newStatus} and notification sent to customer.`);
+      } catch (notifErr) {
+        console.error('Failed to create status update notification:', notifErr);
+        toast.error('Failed to create notification for customer.');
+      }
+      
       await fetchOrderAndTickets(); // Refresh order, tickets, and customer name
     } catch {
       // handle error
@@ -183,7 +279,55 @@ export default function VendorOrderDetailPage() {
     try {
       const newEta = new Date(e.target.value);
       await updateDoc(doc(db, 'orders', order.id), { estimatedDeliveryDate: newEta });
-      setOrder((prev) => (prev ? { ...prev, estimatedDeliveryDate: newEta } : prev));
+      
+      // Add activity log for ETA change
+      try {
+        console.log('Adding ETA change activity for order:', order.id);
+        await addOrderActivity(
+          order.id,
+          'estimated_delivery_updated',
+          'Estimated delivery date updated',
+          user.uid,
+          'vendor',
+          order.estimatedDeliveryDate?.toISOString().split('T')[0] || 'Not set',
+          newEta.toISOString().split('T')[0]
+        );
+        console.log('ETA change activity added successfully');
+        
+        // Refresh order data to include the newly added activity
+        const orderRef = doc(db, 'orders', order.id);
+        const refreshedOrderSnap = await getDoc(orderRef);
+        if (refreshedOrderSnap.exists()) {
+          const refreshedOrderData = refreshedOrderSnap.data() as Order;
+          // Convert timestamps
+          refreshedOrderData.createdAt = refreshedOrderData.createdAt instanceof Timestamp
+            ? refreshedOrderData.createdAt.toDate()
+            : new Date(refreshedOrderData.createdAt);
+          refreshedOrderData.updatedAt = refreshedOrderData.updatedAt instanceof Timestamp
+            ? refreshedOrderData.updatedAt.toDate()
+            : new Date(refreshedOrderData.updatedAt);
+          refreshedOrderData.estimatedDeliveryDate = refreshedOrderData.estimatedDeliveryDate instanceof Timestamp
+            ? refreshedOrderData.estimatedDeliveryDate.toDate()
+            : refreshedOrderData.estimatedDeliveryDate
+              ? new Date(refreshedOrderData.estimatedDeliveryDate)
+              : undefined;
+          
+          // Convert activity log timestamps
+          if (refreshedOrderData.activityLog) {
+            refreshedOrderData.activityLog = refreshedOrderData.activityLog.map((activity: OrderActivity) => ({
+              ...activity,
+              timestamp: activity.timestamp instanceof Timestamp
+                ? activity.timestamp.toDate()
+                : new Date(activity.timestamp),
+            }));
+          }
+          
+          setOrder(refreshedOrderData);
+        }
+      } catch (activityErr) {
+        console.error('Failed to add ETA change activity:', activityErr);
+      }
+      
       await fetchOrderAndTickets();
     } catch {
       // handle error
@@ -197,8 +341,80 @@ export default function VendorOrderDetailPage() {
     setStatusUpdating(true);
     try {
       await updateDoc(doc(db, 'orders', order.id), { status: 'processing' });
-      setOrder((prev) => (prev ? { ...prev, status: 'processing' } : prev));
       setShowAcceptPrompt(false);
+      
+      // Add activity log for order acceptance
+      try {
+        console.log('Adding order acceptance activity for order:', order.id);
+        await addOrderActivity(
+          order.id,
+          'status_changed',
+          'Order accepted and status updated',
+          user.uid,
+          'vendor',
+          order.status,
+          'processing'
+        );
+        console.log('Order acceptance activity added successfully');
+        
+        // Refresh order data to include the newly added activity
+        const orderRef = doc(db, 'orders', order.id);
+        const refreshedOrderSnap = await getDoc(orderRef);
+        if (refreshedOrderSnap.exists()) {
+          const refreshedOrderData = refreshedOrderSnap.data() as Order;
+          // Convert timestamps
+          refreshedOrderData.createdAt = refreshedOrderData.createdAt instanceof Timestamp
+            ? refreshedOrderData.createdAt.toDate()
+            : new Date(refreshedOrderData.createdAt);
+          refreshedOrderData.updatedAt = refreshedOrderData.updatedAt instanceof Timestamp
+            ? refreshedOrderData.updatedAt.toDate()
+            : new Date(refreshedOrderData.updatedAt);
+          refreshedOrderData.estimatedDeliveryDate = refreshedOrderData.estimatedDeliveryDate instanceof Timestamp
+            ? refreshedOrderData.estimatedDeliveryDate.toDate()
+            : refreshedOrderData.estimatedDeliveryDate
+              ? new Date(refreshedOrderData.estimatedDeliveryDate)
+              : undefined;
+          
+          // Convert activity log timestamps
+          if (refreshedOrderData.activityLog) {
+            refreshedOrderData.activityLog = refreshedOrderData.activityLog.map((activity: OrderActivity) => ({
+              ...activity,
+              timestamp: activity.timestamp instanceof Timestamp
+                ? activity.timestamp.toDate()
+                : new Date(activity.timestamp),
+            }));
+          }
+          
+          setOrder(refreshedOrderData);
+        }
+      } catch (activityErr) {
+        console.error('Failed to add order acceptance activity:', activityErr);
+      }
+      
+      // Create notification for customer about order acceptance
+      try {
+
+        
+        const notificationData = {
+          type: 'order_status_update',
+          message: 'Your order has been accepted and is now being processed by the vendor.',
+          createdAt: new Date(),
+          read: false,
+          data: { orderId: order.id, newStatus: 'processing' },
+          link: `/account/orders/${order.id}`,
+          linkLabel: order.orderNumber || order.id,
+        };
+        
+        // Create notification in user's subcollection
+        const userNotificationsRef = collection(db, 'users', order.userId, 'notifications');
+        const notificationRef = await addDoc(userNotificationsRef, notificationData);
+        
+        toast.success('Order accepted and notification sent to customer.');
+      } catch (notifErr) {
+        console.error('Failed to create order acceptance notification:', notifErr);
+        toast.error('Failed to create acceptance notification for customer.');
+      }
+      
       await fetchOrderAndTickets();
     } catch {
       // handle error
@@ -206,6 +422,65 @@ export default function VendorOrderDetailPage() {
       setStatusUpdating(false);
     }
   };
+
+  const handleUpdatePickupAddress = async () => {
+    if (!order || !user) return;
+    
+    setIsUpdatingPickupAddress(true);
+    try {
+      // Update order with pickup address
+      await updateDoc(doc(db, 'orders', order.id), { 
+        pickupAddress: pickupAddress,
+        updatedAt: new Date()
+      });
+
+      // Add activity log for pickup address update
+      try {
+        await addOrderActivity(
+          order.id,
+          'pickup_address_updated',
+          'Pickup address updated by vendor',
+          user.uid,
+          'vendor',
+          order.pickupAddress ? 'Previous address' : 'No address',
+          `${pickupAddress.street}, ${pickupAddress.city}`
+        );
+      } catch (activityErr) {
+        console.error('Failed to add pickup address activity:', activityErr);
+      }
+
+      // Create notification for customer
+      try {
+        const notificationData = {
+          type: 'pickup_address_updated',
+          message: `Pickup address has been ${order.pickupAddress ? 'updated' : 'added'} for your order ${order.orderNumber || order.id}.`,
+          createdAt: new Date(),
+          read: false,
+          data: { orderId: order.id, pickupAddress },
+          link: `/account/orders/${order.id}`,
+          linkLabel: order.orderNumber || order.id,
+        };
+        
+        const userNotificationsRef = collection(db, 'users', order.userId, 'notifications');
+        await addDoc(userNotificationsRef, notificationData);
+      } catch (notifErr) {
+        console.error('Failed to create pickup address notification:', notifErr);
+      }
+
+      // Refresh order data
+      await fetchOrderAndTickets();
+      
+      setShowPickupAddressModal(false);
+      toast.success('Pickup address updated successfully!');
+    } catch (error) {
+      console.error('Error updating pickup address:', error);
+      toast.error('Failed to update pickup address.');
+    } finally {
+      setIsUpdatingPickupAddress(false);
+    }
+  };
+
+
 
   if (loading) {
     return (
@@ -312,6 +587,7 @@ export default function VendorOrderDetailPage() {
                     </svg>
                   </span>
                 </div>
+
               </div>
             </div>
             {/* Right: Dates */}
@@ -336,25 +612,166 @@ export default function VendorOrderDetailPage() {
             </div>
           </div>
 
-          {/* Total Amount Card - Only show vendor receivable */}
-          <div className="mb-4 flex flex-col justify-between gap-4 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-purple-50 p-4 shadow-xl transition hover:shadow-2xl sm:flex-row sm:items-center sm:p-6">
-            <div className="flex items-center gap-3">
-              <span className="bg-gradient-to-r from-blue-600 via-purple-500 to-pink-500 bg-clip-text text-xl font-extrabold text-transparent sm:text-2xl">
-                Total Amount
-              </span>
-              <span className="text-xl font-extrabold text-green-600 sm:text-2xl">
-                $
-                {order.items?.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)}
-              </span>
-            </div>
-            {order.discountAmount && order.discountAmount > 0 && (
-              <div className="flex items-center gap-2 text-sm text-green-600">
-                <span>Coupon Applied:</span>
-                <span className="font-semibold">
-                  {order.couponCode} (-${order.discountAmount.toFixed(2)})
-                </span>
+          {/* Payment Summary Section */}
+          <div className="mb-6 space-y-4">
+            {/* Quick Payment Summary */}
+            <div className="flex flex-col gap-4 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-purple-50 p-6 shadow-xl transition hover:shadow-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg">
+                    <span className="text-xl font-bold">💰</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Payment Summary</h3>
+                    <p className="text-sm text-gray-600">Complete financial breakdown for this order</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-gray-600">Your Payout</div>
+                  <div className="text-2xl font-bold text-green-600">
+                    ${order.paymentBreakdown?.vendorPayoutAmount?.toFixed(2) || 
+                      (order.items?.reduce((sum, item) => sum + item.price * item.quantity, 0) * 0.9).toFixed(2)}
+                  </div>
+                </div>
               </div>
+              
+              {/* Quick Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="rounded-xl bg-white p-4 text-center shadow-sm">
+                  <div className="text-sm text-gray-600">Order Value</div>
+                  <div className="text-lg font-bold text-blue-600">
+                    ${order.items?.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)}
+                  </div>
+                </div>
+                <div className="rounded-xl bg-white p-4 text-center shadow-sm">
+                  <div className="text-sm text-gray-600">Platform Fee</div>
+                  <div className="text-lg font-bold text-red-600">
+                    -${order.paymentBreakdown?.vendorProcessingFee?.toFixed(2) || 
+                      (order.items?.reduce((sum, item) => sum + item.price * item.quantity, 0) * 0.1).toFixed(2)}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">10% of payout amount</div>
+                </div>
+              </div>
+              
+              {/* Delivery Fee Information */}
+              {order.deliveryFee && order.deliveryFee > 0 && (
+                <div className="mt-4 rounded-xl bg-white p-4 text-center shadow-sm">
+                  <div className="text-sm text-gray-600 mb-1">Delivery Fee</div>
+                  <div className="text-lg font-bold text-green-600">
+                    +${order.deliveryFee.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">Added to customer's total</div>
+                </div>
+              )}
+              
+              {/* Pickup Address Section */}
+              {order.deliveryOption === 'pickup' && (
+                <div className="mt-4 rounded-xl bg-yellow-50 p-4 border border-yellow-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">📍</span>
+                      <h4 className="text-lg font-semibold text-yellow-900">Pickup Address</h4>
+                    </div>
+                    <button
+                      onClick={() => setShowPickupAddressModal(true)}
+                      className="px-4 py-2 bg-yellow-600 text-white rounded-lg text-sm font-semibold hover:bg-yellow-700 transition-colors"
+                    >
+                      {order.pickupAddress ? 'Update Address' : 'Add Address'}
+                    </button>
+                  </div>
+                  
+                  {order.pickupAddress ? (
+                    <div className="bg-white p-3 rounded-lg">
+                      <div className="text-sm text-gray-700">
+                        <div className="font-semibold">{order.pickupAddress.street}</div>
+                        <div>{order.pickupAddress.city}, {order.pickupAddress.state} {order.pickupAddress.zipCode}</div>
+                        <div>{order.pickupAddress.country}</div>
+                        {order.pickupAddress.phoneNumber && (
+                          <div className="mt-1 text-blue-600">📞 {order.pickupAddress.phoneNumber}</div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-yellow-700">
+                      No pickup address set. Please add an address for customer pickup.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Detailed Payment Breakdown */}
+            {order.paymentBreakdown && (
+              <PaymentBreakdownDisplay 
+                paymentBreakdown={order.paymentBreakdown} 
+                showVendorFocus={true}
+              />
             )}
+
+            {/* Vendor Payout Status */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                  <span className="text-lg">🏦</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Payout Status</h3>
+                  <p className="text-sm text-gray-600">When you'll receive your payment</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="rounded-xl bg-gray-50 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-gray-700">Current Status</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                      order.vendorPayoutStatus === 'completed' ? 'bg-green-100 text-green-800' :
+                      order.vendorPayoutStatus === 'processing' ? 'bg-blue-100 text-blue-800' :
+                      order.vendorPayoutStatus === 'failed' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {order.vendorPayoutStatus || 'pending'}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {order.vendorPayoutStatus === 'completed' ? 'Payment has been processed and sent to your account.' :
+                     order.vendorPayoutStatus === 'processing' ? 'Payment is being processed and will be sent soon.' :
+                     order.vendorPayoutStatus === 'failed' ? 'Payment processing failed. Please contact support.' :
+                     'Payment will be processed after order delivery or cancellation.'}
+                  </div>
+                </div>
+                
+                <div className="rounded-xl bg-gray-50 p-4">
+                  <div className="text-sm font-semibold text-gray-700 mb-2">Payout Timeline</div>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      <span>Order placed - Payment held</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${order.status === 'delivered' || order.status === 'cancelled' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <span>Order delivered/cancelled - Payment processing</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${order.vendorPayoutStatus === 'completed' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <span>Payment sent to your account</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {order.vendorPayoutDate && (
+                <div className="mt-4 rounded-lg bg-green-50 p-3 border border-green-200">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-green-600">✅</span>
+                    <span className="font-semibold text-green-800">Payout Date:</span>
+                    <span className="text-green-700">
+                      {dayjs(order.vendorPayoutDate).format('DD MMM YYYY, h:mm A')}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Product Card(s) */}
@@ -383,32 +800,31 @@ export default function VendorOrderDetailPage() {
                   {/* Product Details */}
                   <div className="flex flex-1 flex-col items-center gap-1 text-center sm:items-start sm:text-left">
                     <div className="mb-1 flex w-full flex-col justify-center gap-2 sm:flex-row sm:items-center sm:justify-start">
-                      <Link href={`/vendor/products/${item.id}/edit`} legacyBehavior>
-                        <a
+                                              <Link 
+                          href={`/vendor/products/${item.id}/edit`}
                           className="relative cursor-pointer text-lg font-extrabold text-blue-700 hover:underline sm:text-xl"
                           onMouseEnter={() => setPopoverIdx(idx)}
                           onMouseLeave={() => setPopoverIdx(null)}
-                        >
-                          {item.name}
-                          {/* Popover */}
-                          {popoverIdx === idx && (
-                            <div className="animate-fade-in-up absolute top-full left-1/2 z-50 mt-2 w-72 -translate-x-1/2 rounded-xl border border-gray-200 bg-white p-4 text-left shadow-xl">
-                              <div className="mb-1 text-lg font-bold">{item.name}</div>
-                              <div className="mb-1 text-gray-700">{item.description}</div>
-                              <div className="mb-1 text-xs font-semibold text-purple-600">
-                                Category: {item.category}
+                                                  >
+                            {item.name}
+                            {/* Popover */}
+                            {popoverIdx === idx && (
+                              <div className="animate-fade-in-up absolute top-full left-1/2 z-50 mt-2 w-72 -translate-x-1/2 rounded-xl border border-gray-200 bg-white p-4 text-left shadow-xl">
+                                <div className="mb-1 text-lg font-bold">{item.name}</div>
+                                <div className="mb-1 text-gray-700">{item.description}</div>
+                                <div className="mb-1 text-xs font-semibold text-purple-600">
+                                  Category: {item.category}
+                                </div>
+                                <div className="mb-1 text-xs font-semibold text-pink-600">
+                                  Brand: {item.brand}
+                                </div>
+                                <div className="mb-1 text-xs text-gray-500">Stock: {item.stock}</div>
+                                <div className="mb-1 text-xs text-gray-500">
+                                  Unit Price: ${item.price?.toFixed(2)}
+                                </div>
                               </div>
-                              <div className="mb-1 text-xs font-semibold text-pink-600">
-                                Brand: {item.brand}
-                              </div>
-                              <div className="mb-1 text-xs text-gray-500">Stock: {item.stock}</div>
-                              <div className="mb-1 text-xs text-gray-500">
-                                Unit Price: ${item.price?.toFixed(2)}
-                              </div>
-                            </div>
-                          )}
-                        </a>
-                      </Link>
+                            )}
+                          </Link>
                       <span className="rounded-full bg-blue-600 px-4 py-1 text-lg font-extrabold text-white shadow-sm">
                         x{item.quantity}
                       </span>
@@ -441,6 +857,126 @@ export default function VendorOrderDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Pickup Address Modal */}
+      {showPickupAddressModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Pickup Address</h3>
+              <button
+                onClick={() => setShowPickupAddressModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="text-2xl">×</span>
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Street Address *
+                </label>
+                <input
+                  type="text"
+                  value={pickupAddress.street}
+                  onChange={(e) => setPickupAddress(prev => ({ ...prev, street: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  placeholder="Enter street address"
+                  required
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    City *
+                  </label>
+                  <input
+                    type="text"
+                    value={pickupAddress.city}
+                    onChange={(e) => setPickupAddress(prev => ({ ...prev, city: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                    placeholder="City"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    State *
+                  </label>
+                  <input
+                    type="text"
+                    value={pickupAddress.state}
+                    onChange={(e) => setPickupAddress(prev => ({ ...prev, state: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                    placeholder="State"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ZIP Code *
+                  </label>
+                  <input
+                    type="text"
+                    value={pickupAddress.zipCode}
+                    onChange={(e) => setPickupAddress(prev => ({ ...prev, zipCode: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                    placeholder="ZIP Code"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Country *
+                  </label>
+                  <input
+                    type="text"
+                    value={pickupAddress.country}
+                    onChange={(e) => setPickupAddress(prev => ({ ...prev, country: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                    placeholder="Country"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={pickupAddress.phoneNumber}
+                  onChange={(e) => setPickupAddress(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  placeholder="Contact phone number"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowPickupAddressModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdatePickupAddress}
+                disabled={isUpdatingPickupAddress || !pickupAddress.street || !pickupAddress.city || !pickupAddress.state || !pickupAddress.zipCode || !pickupAddress.country}
+                className="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isUpdatingPickupAddress ? 'Updating...' : 'Update Address'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -34,7 +34,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (user) {
         setLoading(true);
         try {
-          const cartDocRef = doc(db, 'carts', user.uid);
+          // Use user's cart subcollection
+          const cartDocRef = doc(db, 'users', user.uid, 'cart', 'current');
           const cartDocSnap = await getDoc(cartDocRef);
           if (cartDocSnap.exists()) {
             const data = cartDocSnap.data();
@@ -105,7 +106,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const cartDocRef = doc(db, 'carts', user.uid);
+    // Use user's cart subcollection
+    const cartDocRef = doc(db, 'users', user.uid, 'cart', 'current');
     const newCartItems = [...cartItems];
 
     const existingItemIndex = newCartItems.findIndex((item) => item.id === product.id);
@@ -131,7 +133,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const removeFromCart = async (productId: string) => {
     if (!user) return;
-    const cartDocRef = doc(db, 'carts', user.uid);
+    // Use user's cart subcollection
+    const cartDocRef = doc(db, 'users', user.uid, 'cart', 'current');
     const removedItem = cartItems.find((item) => item.id === productId);
     const updatedCartItems = cartItems.filter((item) => item.id !== productId);
     prevCartRef.current = cartItems;
@@ -175,7 +178,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const updateCartItemQuantity = async (productId: string, newQuantity: number) => {
     if (!user) return;
-    const cartDocRef = doc(db, 'carts', user.uid);
+    // Use user's cart subcollection
+    const cartDocRef = doc(db, 'users', user.uid, 'cart', 'current');
     const prevCart = [...cartItems];
     const updatedCartItems = cartItems.map((item) =>
       item.id === productId ? { ...item, quantity: newQuantity } : item
@@ -192,7 +196,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = async () => {
     if (!user) return;
-    const cartDocRef = doc(db, 'carts', user.uid);
+    // Use user's cart subcollection
+    const cartDocRef = doc(db, 'users', user.uid, 'cart', 'current');
     const prevCart = [...cartItems];
     prevCartRef.current = cartItems;
     try {

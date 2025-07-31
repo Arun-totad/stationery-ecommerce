@@ -3,7 +3,7 @@ import Razorpay from 'razorpay';
 import { doc, collection, addDoc, writeBatch, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Order, CartItem } from '@/types';
-import { calculateServiceFee, DELIVERY_FEE } from '@/lib/fees';
+import { calculateCustomerServiceFee, calculateVendorProcessingFee, calculatePaymentBreakdown, DELIVERY_FEE } from '@/lib/fees';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID as string,
@@ -56,8 +56,10 @@ export async function POST(request: Request) {
           0
         );
         const deliveryFee = deliveryOption === 'delivery' ? DELIVERY_FEE : 0;
-        const serviceFee = calculateServiceFee(vendorOrderSubtotal);
-        const total = vendorOrderSubtotal + deliveryFee + serviceFee;
+        const customerServiceFee = calculateCustomerServiceFee(vendorOrderSubtotal);
+        const vendorProcessingFee = calculateVendorProcessingFee(vendorOrderSubtotal);
+        const paymentBreakdown = calculatePaymentBreakdown(vendorOrderSubtotal, deliveryFee, 0);
+        const total = paymentBreakdown.totalChargedToCustomer;
 
         // Generate persistent order number
         let orderNumber = '';
@@ -85,7 +87,9 @@ export async function POST(request: Request) {
           items: vendorItems,
           total,
           deliveryFee,
-          serviceFee,
+          serviceFee: customerServiceFee, // Customer service fee
+          vendorProcessingFee,
+          paymentBreakdown,
           status: 'pending',
           shippingAddress: shippingAddress,
           paymentStatus: 'completed', // Payment is completed via Razorpay
@@ -97,6 +101,7 @@ export async function POST(request: Request) {
           estimatedDeliveryDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
           customerEmail: email,
           orderNumber,
+          vendorPayoutStatus: 'pending', // Vendor payout is pending
         };
 
         batch.set(newOrderRef, newOrder);
@@ -110,7 +115,7 @@ export async function POST(request: Request) {
       }
 
       // Clear user's cart in Firestore
-      const userCartRef = doc(db, 'carts', userId);
+      const userCartRef = doc(db, 'users', userId, 'cart', 'current');
       batch.update(userCartRef, { items: [], total: 0, updatedAt: new Date() });
 
       // Commit the batch first
@@ -119,8 +124,7 @@ export async function POST(request: Request) {
       // Only create notifications after successful batch commit
       for (let i = 0; i < orderNumbers.length; i++) {
         try {
-          await addDoc(collection(db, 'notifications'), {
-            userId: userId,
+          const notificationData = {
             type: 'order_placed',
             message: 'Your order has been placed successfully!',
             createdAt: new Date(),
@@ -128,7 +132,11 @@ export async function POST(request: Request) {
             data: { orderNumber: orderNumbers[i] },
             link: `/account/orders/${orderRefs[i].id}`,
             linkLabel: orderNumbers[i],
-          });
+          };
+          
+          // Create notification in user's subcollection
+          const userNotificationsRef = collection(db, 'users', userId, 'notifications');
+          await addDoc(userNotificationsRef, notificationData);
         } catch (notifErr) {
           console.error('Failed to create notification for order:', orderNumbers[i], notifErr);
           // Don't fail the entire order process if notification creation fails
