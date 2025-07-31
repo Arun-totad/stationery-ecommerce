@@ -11,17 +11,13 @@ import { useAuth } from '@/context/AuthContext';
 import {
   FaBoxOpen,
   FaDollarSign,
-  FaShippingFast,
   FaReceipt,
   FaTrash,
   FaShoppingCart,
   FaArrowRight,
 } from 'react-icons/fa';
 import {
-  calculateDeliveryFee,
   FREE_SHIPPING_THRESHOLD,
-  calculateServiceFee,
-  DELIVERY_FEE,
 } from '@/lib/fees';
 
 export default function CartPage() {
@@ -30,10 +26,6 @@ export default function CartPage() {
   const { user } = useAuth();
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = calculateDeliveryFee(subtotal);
-  const freeShippingThreshold = FREE_SHIPPING_THRESHOLD;
-  const serviceFee = calculateServiceFee(subtotal);
-  const orderTotal = subtotal + shipping + serviceFee;
 
   const subtotalRefs = useRef<Record<string, HTMLSpanElement | null>>({});
   const [lastChangedId, setLastChangedId] = useState<string | null>(null);
@@ -189,12 +181,7 @@ export default function CartPage() {
                   </div>
                 ))}
               </div>
-              {/* Subtotal at the right end of cart items card */}
-              <div className="mt-6 flex justify-end">
-                <div className="rounded-full bg-gradient-to-r from-blue-100 to-pink-100 px-6 py-3 text-xl font-bold text-gray-900 shadow">
-                  Subtotal: <span className="text-indigo-600">${subtotal.toFixed(2)}</span>
-                </div>
-              </div>
+
               <div className="mt-8 flex justify-end">
                 <button
                   onClick={clearCart}
@@ -215,59 +202,6 @@ export default function CartPage() {
                     <FaDollarSign className="text-blue-400" /> Subtotal
                   </span>
                   <span>${subtotal.toFixed(2)}</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between font-semibold text-gray-700">
-                  <span className="flex items-center gap-2">
-                    <FaShippingFast className="text-pink-400" /> Delivery Fee
-                  </span>
-                  <span className="flex flex-col items-end">
-                    <span
-                      className={
-                        subtotal >= freeShippingThreshold
-                          ? 'text-xl font-extrabold text-green-600'
-                          : 'text-lg font-bold text-blue-600'
-                      }
-                    >
-                      ${subtotal >= freeShippingThreshold ? '0.00' : shipping.toFixed(2)}
-                    </span>
-                    {subtotal >= freeShippingThreshold && (
-                      <span className="mt-0.5 flex items-center gap-1">
-                        <span
-                          className="rounded-full border border-green-300 bg-gradient-to-r from-green-400 to-blue-400 px-3 py-1 text-xs font-bold text-white shadow select-none"
-                          style={{ letterSpacing: '2px' }}
-                        >
-                          FREE
-                        </span>
-                        <span className="text-sm font-bold text-red-600">
-                          -${DELIVERY_FEE.toFixed(2)}
-                        </span>
-                      </span>
-                    )}
-                  </span>
-                </div>
-                {subtotal < freeShippingThreshold && (
-                  <div className="animate-fade-in mt-2 mb-2 flex w-full items-center overflow-hidden rounded-full border border-blue-100 bg-gradient-to-r from-blue-50 via-green-50 to-pink-50 px-4 py-2 whitespace-nowrap shadow">
-                    <span className="mr-1 animate-bounce text-lg leading-tight font-extrabold text-green-600 md:text-xl">
-                      ${(freeShippingThreshold - subtotal).toFixed(0)}
-                    </span>
-                    <span
-                      className="ml-1 align-middle text-base font-medium text-gray-500 md:text-lg"
-                      style={{ fontWeight: 500 }}
-                    >
-                      away from <span className="font-bold text-green-600">FREE delivery!</span>
-                    </span>
-                  </div>
-                )}
-                <div className="mt-2 flex items-center justify-between text-gray-700">
-                  <span className="flex items-center gap-2">
-                    <FaReceipt className="text-purple-400" /> Service Fee{' '}
-                    <span className="ml-2 text-xs text-gray-500">(2% of subtotal)</span>
-                  </span>
-                  <span>${serviceFee.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center justify-between border-t border-gray-200 pt-5 text-2xl font-extrabold text-gray-900">
-                  <span>Order Total</span>
-                  <span>${orderTotal.toFixed(2)}</span>
                 </div>
               </div>
               <button

@@ -19,6 +19,7 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
   UserPlusIcon,
+  TicketIcon,
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -42,6 +43,7 @@ const adminNavigation = [
   { name: 'Products', href: '/admin?view=products', icon: CubeIcon },
   { name: 'Orders', href: '/admin?view=orders', icon: ClipboardDocumentListIcon },
   { name: 'Transactions', href: '/admin?view=transactions', icon: CurrencyDollarIcon },
+  { name: 'Coupons', href: '/admin/coupons', icon: TicketIcon },
   { name: 'Support Tickets', href: '/admin/support', icon: LifebuoyIcon },
 ];
 

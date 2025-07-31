@@ -347,6 +347,14 @@ export default function VendorOrderDetailPage() {
                 {order.items?.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)}
               </span>
             </div>
+            {order.discountAmount && order.discountAmount > 0 && (
+              <div className="flex items-center gap-2 text-sm text-green-600">
+                <span>Coupon Applied:</span>
+                <span className="font-semibold">
+                  {order.couponCode} (-${order.discountAmount.toFixed(2)})
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Product Card(s) */}

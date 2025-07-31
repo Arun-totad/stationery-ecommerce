@@ -94,6 +94,8 @@ export interface Order {
   deliveryFee?: number; // Delivery fee for the order
   serviceFee?: number; // Service fee for the order
   estimatedTimeArrival?: Date; // Add this field for ETA
+  couponCode?: string; // Coupon code used for this order
+  discountAmount?: number; // Discount amount applied to this order
 }
 
 export interface SupportTicket {
@@ -137,4 +139,33 @@ export interface Notification {
   data?: any; // Optional: for extra info (orderId, ticketId, etc.)
   link?: string; // Optional: link to navigate
   linkLabel?: string; // Optional: label for the link
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number; // Percentage (0-100) or fixed amount in dollars
+  minimumOrderAmount?: number; // Minimum order amount required to use coupon
+  maximumDiscount?: number; // Maximum discount amount for percentage coupons
+  validFrom: Date;
+  validUntil: Date;
+  usageLimit?: number; // Total number of times this coupon can be used
+  usedCount: number; // Number of times this coupon has been used
+  isActive: boolean;
+  restrictedToUser?: string; // User ID if coupon is restricted to specific user
+  createdBy: string; // Admin/Admin-manager who created the coupon
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CouponUsage {
+  id: string;
+  couponId: string;
+  userId: string;
+  orderId: string;
+  discountAmount: number;
+  usedAt: Date;
 }

@@ -103,25 +103,54 @@ service cloud.firestore {
 
     // Support tickets collection
     match /supportTickets/{ticketId} {
-      allow read: if isAuthenticated() && (
-        isOwner(resource.data.userId) || 
-        isAdmin() || 
-        isAdminManager() ||
-        // Allow vendor to read tickets for their orders
-        (
-          resource.data.orderId != null &&
-          exists(/databases/$(database)/documents/orders/$(resource.data.orderId)) &&
-          isVendorOwner(get(/databases/$(database)/documents/orders/$(resource.data.orderId)).data.vendorId)
-        )
-      );
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin() || isAdminManager());
       allow list: if isAuthenticated() && (isOwner(request.auth.uid) || isAdmin() || isAdminManager());
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (
-        isOwner(resource.data.userId) || 
-        isAdmin() || 
-        isAdminManager()
-      );
-      allow delete: if isAuthenticated() && (isAdmin() || isAdminManager());
+      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin() || isAdminManager());
+      allow delete: if isAdmin() || isAdminManager();
+    }
+
+    // Coupons collection
+    match /coupons/{couponId} {
+      allow read: if isAuthenticated();
+      allow list: if isAuthenticated();
+      allow create: if (isAdmin() || isAdminManager()) && 
+        request.resource.data.code is string &&
+        request.resource.data.code.size() > 0 &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.discountValue is number &&
+        request.resource.data.discountValue > 0 &&
+        request.resource.data.validFrom is timestamp &&
+        request.resource.data.validUntil is timestamp &&
+        request.resource.data.validUntil > request.resource.data.validFrom;
+      allow update: if (isAdmin() || isAdminManager()) && 
+        request.resource.data.code is string &&
+        request.resource.data.code.size() > 0 &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.discountValue is number &&
+        request.resource.data.discountValue > 0 &&
+        request.resource.data.validFrom is timestamp &&
+        request.resource.data.validUntil is timestamp &&
+        request.resource.data.validUntil > request.resource.data.validFrom;
+      allow delete: if isAdmin() || isAdminManager();
+    }
+
+    // Coupon usage collection
+    match /couponUsage/{usageId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin() || isAdminManager());
+      allow list: if isAuthenticated() && (isOwner(request.auth.uid) || isAdmin() || isAdminManager());
+      allow create: if isAuthenticated() && 
+        request.resource.data.couponId is string &&
+        request.resource.data.userId is string &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.orderId is string &&
+        request.resource.data.discountAmount is number &&
+        request.resource.data.discountAmount > 0 &&
+        request.resource.data.usedAt is timestamp;
+      allow update: if isAdmin() || isAdminManager();
+      allow delete: if isAdmin() || isAdminManager();
     }
 
     // Transactions collection

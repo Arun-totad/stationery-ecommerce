@@ -281,6 +281,14 @@ export default function UserOrdersPage() {
                         ${order.total.toFixed(2)}
                       </span>
                     </div>
+                    {order.discountAmount && order.discountAmount > 0 && (
+                      <div className="flex items-center text-green-600">
+                        <span className="mr-2 text-xs font-medium">Coupon:</span>
+                        <span className="text-sm font-semibold">
+                          {order.couponCode} (-${order.discountAmount.toFixed(2)})
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center text-gray-700">
                       <span className="mr-2 font-medium">Placed on:</span>
                       <span>{formatDateDDMMYYYY(order.createdAt)}</span>

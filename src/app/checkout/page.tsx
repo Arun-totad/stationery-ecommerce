@@ -17,7 +17,7 @@ import {
   getDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Address, Order, CartItem } from '@/types';
+import { Address, Order, CartItem, Coupon } from '@/types';
 import {
   calculateDeliveryFee,
   FREE_SHIPPING_THRESHOLD,
@@ -25,6 +25,7 @@ import {
   DELIVERY_FEE,
 } from '@/lib/fees';
 import { validateAddress } from '@/lib/validation';
+import { validateCoupon, calculateDiscountAmount } from '@/lib/coupons';
 
 declare global {
   interface Window {
@@ -59,6 +60,13 @@ export default function CheckoutPage() {
   const [selectedDeliveryOption, setSelectedDeliveryOption] = useState<'delivery' | 'pickup'>('delivery');
   const [phone, setPhone] = useState(user?.phoneNumber || '');
   const [email, setEmail] = useState('');
+  
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [couponError, setCouponError] = useState('');
+  const [couponSuccess, setCouponSuccess] = useState('');
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   // Phone number formatter
   const formatPhoneNumber = (value: string) => {
@@ -417,7 +425,16 @@ export default function CheckoutPage() {
           );
           const deliveryFee = selectedDeliveryOption === 'delivery' ? DELIVERY_FEE : 0;
           const serviceFee = calculateServiceFee(vendorOrderSubtotal);
-          const total = vendorOrderSubtotal + deliveryFee + serviceFee;
+          
+          // Calculate coupon discount for this vendor's portion
+          let vendorDiscountAmount = 0;
+          if (appliedCoupon) {
+            // Calculate what portion of the coupon discount applies to this vendor
+            const vendorPortion = vendorOrderSubtotal / subtotal;
+            vendorDiscountAmount = discountAmount * vendorPortion;
+          }
+          
+          const total = vendorOrderSubtotal + deliveryFee + serviceFee - vendorDiscountAmount;
 
           // Generate persistent order number
           let orderNumber = '';
@@ -458,6 +475,8 @@ export default function CheckoutPage() {
             customerName: user.displayName || '', // Store customer name
             customerEmail: email, // Optionally store email
             orderNumber, // Store persistent order number
+            couponCode: appliedCoupon?.code || null,
+            discountAmount: vendorDiscountAmount,
           };
           
           batch.set(newOrderRef, newOrder);
@@ -473,6 +492,29 @@ export default function CheckoutPage() {
         console.log('Attempting to commit batch...');
         await batch.commit();
         console.log('Batch committed successfully');
+
+        // Update coupon usage count if a coupon was applied
+        if (appliedCoupon) {
+          try {
+            const couponRef = doc(db, 'coupons', appliedCoupon.id);
+            await updateDoc(couponRef, {
+              usedCount: appliedCoupon.usedCount + 1,
+              updatedAt: new Date()
+            });
+
+            // Record coupon usage
+            await addDoc(collection(db, 'couponUsage'), {
+              couponId: appliedCoupon.id,
+              userId: user.uid,
+              orderId: orderRefs[0].id, // Use the first order ID as reference
+              discountAmount: discountAmount,
+              usedAt: new Date()
+            });
+          } catch (couponError) {
+            console.error('Error updating coupon usage:', couponError);
+            // Don't fail the order if coupon update fails
+          }
+        }
         
         // Only create notifications after successful batch commit
         for (let i = 0; i < orderNumbers.length; i++) {
@@ -598,7 +640,8 @@ export default function CheckoutPage() {
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = selectedDeliveryOption === 'delivery' ? DELIVERY_FEE : 0;
   const serviceFee = calculateServiceFee(subtotal);
-  const orderTotal = subtotal + shipping + serviceFee;
+  const discountAmount = appliedCoupon ? calculateDiscountAmount(appliedCoupon, subtotal) : 0;
+  const orderTotal = subtotal + shipping + serviceFee - discountAmount;
 
   // Address validation helper
   const isAddressComplete = (address: Address | undefined) => {
@@ -618,6 +661,45 @@ export default function CheckoutPage() {
       (field) => !field || field.trim() === ''
     );
   }
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError('Please enter a coupon code');
+      return;
+    }
+
+    if (!user?.uid) {
+      setCouponError('Please log in to apply coupons');
+      return;
+    }
+
+    setIsValidatingCoupon(true);
+    setCouponError('');
+    setCouponSuccess('');
+
+    try {
+      const result = await validateCoupon(couponCode.trim(), user.uid, subtotal);
+      
+      if (result.isValid && result.coupon) {
+        setAppliedCoupon(result.coupon);
+        setCouponSuccess(`Coupon applied! You saved $${result.discountAmount?.toFixed(2)}`);
+        setCouponCode('');
+      } else {
+        setCouponError(result.error || 'Invalid coupon');
+      }
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      setCouponError('Error applying coupon. Please try again.');
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError('');
+    setCouponSuccess('');
+  };
 
   const addressErrorMessages = Object.values(addressErrors).filter(Boolean);
 
@@ -1046,6 +1128,61 @@ export default function CheckoutPage() {
                   </span>
                   <span className="font-semibold text-gray-900">${serviceFee.toFixed(2)}</span>
                 </div>
+
+                {/* Coupon Section */}
+                <div className="border-t border-gray-200 pt-4">
+                  {!appliedCoupon ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter coupon code"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          onKeyPress={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                        />
+                        <button
+                          onClick={handleApplyCoupon}
+                          disabled={isValidatingCoupon || !couponCode.trim()}
+                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isValidatingCoupon ? 'Applying...' : 'Apply'}
+                        </button>
+                      </div>
+                      {couponError && (
+                        <div className="text-sm text-red-600">{couponError}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between rounded-lg bg-green-50 p-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-green-800">
+                          {appliedCoupon.name} ({appliedCoupon.code})
+                        </span>
+                        <span className="text-sm text-green-600">
+                          -${discountAmount.toFixed(2)}
+                        </span>
+                      </div>
+                      <button
+                        onClick={handleRemoveCoupon}
+                        className="text-sm text-red-600 hover:text-red-800"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                  {couponSuccess && (
+                    <div className="text-sm text-green-600">{couponSuccess}</div>
+                  )}
+                </div>
+
+                {appliedCoupon && (
+                  <div className="flex items-center justify-between text-green-600">
+                    <span className="font-medium">Discount ({appliedCoupon.discountType === 'percentage' ? `${appliedCoupon.discountValue}%` : `$${appliedCoupon.discountValue}`})</span>
+                    <span className="font-semibold">-${discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="mt-2 flex items-center justify-between border-t border-gray-200 pt-4">
                   <span className="text-lg font-bold text-gray-900">Total</span>
                   <span className="text-2xl font-extrabold text-pink-500">

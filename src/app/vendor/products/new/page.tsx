@@ -423,63 +423,65 @@ export default function NewProductPage() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="grid grid-cols-1 gap-6 sm:grid-cols-2"
+                  className="space-y-6"
                 >
-                  <div className="relative">
-                    <select
-                      id="condition"
-                      {...formik.getFieldProps('condition')}
-                      className={`peer block w-full appearance-none rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.condition && formik.errors.condition ? 'animate-shake border-red-400' : ''}`}
-                    >
-                      <option value="" disabled hidden>
-                        Select condition
-                      </option>
-                      <option value="like-new">Like New</option>
-                      <option value="good">Good</option>
-                      <option value="fair">Fair</option>
-                      <option value="poor">Poor</option>
-                    </select>
-                    <label
-                      htmlFor="condition"
-                      className={`pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 ${!formik.values.condition ? 'top-5 text-base' : 'top-2 text-sm'} peer-focus:top-2 peer-focus:text-sm`}
-                    >
-                      Condition
-                    </label>
-                    {formik.touched.condition && formik.errors.condition && (
-                      <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="mt-1 text-xs text-red-600"
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div className="relative">
+                      <select
+                        id="condition"
+                        {...formik.getFieldProps('condition')}
+                        className={`peer block w-full appearance-none rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.condition && formik.errors.condition ? 'animate-shake border-red-400' : ''}`}
                       >
-                        {formik.errors.condition}
-                      </motion.p>
-                    )}
-                  </div>
+                        <option value="" disabled hidden>
+                          Select condition
+                        </option>
+                        <option value="like-new">Like New</option>
+                        <option value="good">Good</option>
+                        <option value="fair">Fair</option>
+                        <option value="poor">Poor</option>
+                      </select>
+                      <label
+                        htmlFor="condition"
+                        className={`pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 ${!formik.values.condition ? 'top-5 text-base' : 'top-2 text-sm'} peer-focus:top-2 peer-focus:text-sm`}
+                      >
+                        Condition
+                      </label>
+                      {formik.touched.condition && formik.errors.condition && (
+                        <motion.p
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="mt-1 text-xs text-red-600"
+                        >
+                          {formik.errors.condition}
+                        </motion.p>
+                      )}
+                    </div>
 
-                  <div className="relative">
-                    <input
-                      id="originalPrice"
-                      type="number"
-                      step="0.01"
-                      {...formik.getFieldProps('originalPrice')}
-                      className={`peer block w-full rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.originalPrice && formik.errors.originalPrice ? 'animate-shake border-red-400' : ''}`}
-                      placeholder=" "
-                    />
-                    <label
-                      htmlFor="originalPrice"
-                      className={`pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 ${!formik.values.originalPrice ? 'top-5 text-base' : 'top-2 text-sm'} peer-focus:top-2 peer-focus:text-sm`}
-                    >
-                      Original Price ($)
-                    </label>
-                    {formik.touched.originalPrice && formik.errors.originalPrice && (
-                      <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="mt-1 text-xs text-red-600"
+                    <div className="relative">
+                      <input
+                        id="originalPrice"
+                        type="number"
+                        step="0.01"
+                        {...formik.getFieldProps('originalPrice')}
+                        className={`peer block w-full rounded-xl border border-gray-300 bg-white/80 px-4 pt-6 pb-2 text-gray-900 shadow-sm transition-all duration-200 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 ${formik.touched.originalPrice && formik.errors.originalPrice ? 'animate-shake border-red-400' : ''}`}
+                        placeholder=" "
+                      />
+                      <label
+                        htmlFor="originalPrice"
+                        className={`pointer-events-none absolute top-2 left-4 rounded bg-white/80 px-1 text-sm text-gray-500 transition-all duration-200 ${!formik.values.originalPrice ? 'top-5 text-base' : 'top-2 text-sm'} peer-focus:top-2 peer-focus:text-sm`}
                       >
-                        {formik.errors.originalPrice}
-                      </motion.p>
-                    )}
+                        Original Price ($)
+                      </label>
+                      {formik.touched.originalPrice && formik.errors.originalPrice && (
+                        <motion.p
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="mt-1 text-xs text-red-600"
+                        >
+                          {formik.errors.originalPrice}
+                        </motion.p>
+                      )}
+                    </div>
                   </div>
                 </motion.div>
               )}

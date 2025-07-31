@@ -378,6 +378,16 @@ export default function OrderDetailPage() {
                       ${order.serviceFee ? order.serviceFee.toFixed(2) : '0.00'}
                     </p>
                   </div>
+                  {order.discountAmount && order.discountAmount > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">
+                        Discount {order.couponCode && `(${order.couponCode})`}
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-green-600">
+                        -${order.discountAmount.toFixed(2)}
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-sm font-medium text-gray-500">Grand Total</p>
                     <p className="mt-1 text-2xl font-extrabold text-blue-700">

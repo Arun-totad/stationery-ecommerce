@@ -262,7 +262,8 @@ export default function UserOrderDetailPage() {
   const subtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const deliveryFee = order.deliveryFee ?? 0;
   const serviceFee = order.serviceFee ?? 0;
-  const total = subtotal + deliveryFee + serviceFee;
+  const discountAmount = order.discountAmount ?? 0;
+  const total = subtotal + deliveryFee + serviceFee - discountAmount;
 
   // Helper: Payment method full form
   const paymentMethodDisplay =
@@ -423,6 +424,16 @@ export default function UserOrderDetailPage() {
               </span>
               <span className="font-semibold">${serviceFee.toFixed(2)}</span>
             </div>
+            {discountAmount > 0 && (
+              <div className="mb-4 flex items-center justify-between text-sm text-green-600">
+                <span>
+                  Discount {order.couponCode && (
+                    <span className="ml-2 text-xs text-gray-500">({order.couponCode})</span>
+                  )}
+                </span>
+                <span className="font-semibold">-${discountAmount.toFixed(2)}</span>
+              </div>
+            )}
             <div className="mt-4 flex items-center justify-between border-t border-blue-200 pt-4 text-lg font-bold">
               <span className="text-gray-900">Total</span>
               <span className="text-blue-600">${total.toFixed(2)}</span>
